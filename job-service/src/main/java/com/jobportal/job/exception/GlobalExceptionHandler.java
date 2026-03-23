@@ -2,6 +2,7 @@ package com.jobportal.job.exception;
 
 import com.jobportal.common.dto.ErrorResponse;
 import com.jobportal.common.exception.BadRequestException;
+import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.common.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
             .body(ErrorResponse.builder().status(404).error("Not Found")
+                .message(ex.getMessage()).timestamp(LocalDateTime.now()).build());
+    }
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ErrorResponse.builder().status(403).error("Forbidden")
                 .message(ex.getMessage()).timestamp(LocalDateTime.now()).build());
     }
     @ExceptionHandler(BadRequestException.class)

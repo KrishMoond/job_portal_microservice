@@ -24,9 +24,9 @@ public class JobController {
     @PostMapping
     public ResponseEntity<ApiResponse<JobResponse>> create(
             @Valid @RequestBody JobRequest req,
-            @RequestHeader("X-User-Id") String recruiterId) {
+            @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(jobService.createJob(req, recruiterId), "Job created"));
+            .body(ApiResponse.success(jobService.createJob(req, userId), "Job created"));
     }
 
     @GetMapping("/{jobId}")
@@ -40,7 +40,12 @@ public class JobController {
     }
 
     @PutMapping("/{jobId}/close")
-    public ResponseEntity<ApiResponse<JobResponse>> closeJob(@PathVariable String jobId) {
-        return ResponseEntity.ok(ApiResponse.success(jobService.closeJob(jobId), "Job closed"));
+    public ResponseEntity<ApiResponse<JobResponse>> closeJob(
+            @PathVariable String jobId,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "RECRUITER") String role) {
+        if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
+            throw new ForbiddenException("Only recruiters and admins can close jobs");
+        return ResponseEntity.ok(ApiResponse.success(jobService.closeJob(jobId, userId, role), "Job closed"));
     }
 }

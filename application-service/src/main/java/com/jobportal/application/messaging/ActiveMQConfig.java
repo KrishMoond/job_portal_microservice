@@ -38,6 +38,7 @@ public class ActiveMQConfig {
     public JmsTemplate appJmsTemplate() {
         JmsTemplate t = new JmsTemplate(appConnectionFactory());
         t.setMessageConverter(appMessageConverter());
+        t.setPubSubDomain(false);
         t.setDeliveryPersistent(true);
         return t;
     }

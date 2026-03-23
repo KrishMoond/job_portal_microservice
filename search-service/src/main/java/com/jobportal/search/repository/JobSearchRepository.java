@@ -11,10 +11,11 @@ import java.util.Optional;
 public interface JobSearchRepository extends JpaRepository<JobSearchRecord, String> {
     Optional<JobSearchRecord> findByJobId(String jobId);
 
-    @Query("SELECT j FROM JobSearchRecord j WHERE j.status = 'OPEN' AND " +
-           "(:keyword IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-           "(:location IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', :location, '%')))")
+    @Query(value = "SELECT * FROM job_search_records j WHERE j.status = 'OPEN' " +
+           "AND (CAST(:keyword AS TEXT) IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (CAST(:location AS TEXT) IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', :location, '%')))",
+           nativeQuery = true)
     List<JobSearchRecord> search(@Param("keyword") String keyword,
                                   @Param("location") String location);
 }

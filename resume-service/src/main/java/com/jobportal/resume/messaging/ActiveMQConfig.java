@@ -38,6 +38,8 @@ public class ActiveMQConfig {
     public JmsTemplate resumeJmsTemplate() {
         JmsTemplate t = new JmsTemplate(resumeConnectionFactory());
         t.setMessageConverter(resumeMessageConverter());
+        t.setPubSubDomain(false);
+        t.setDeliveryPersistent(true);
         return t;
     }
 }

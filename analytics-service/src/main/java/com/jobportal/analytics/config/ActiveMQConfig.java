@@ -41,6 +41,7 @@ public class ActiveMQConfig {
         DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
         factory.setConnectionFactory(analyticsConnectionFactory());
         factory.setMessageConverter(analyticsMessageConverter());
+        factory.setPubSubDomain(false);
         factory.setConcurrency("1-3");
         return factory;
     }
