@@ -1,6 +1,7 @@
 package com.jobportal.job.controller;
 
 import com.jobportal.common.dto.ApiResponse;
+import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.job.dto.JobRequest;
 import com.jobportal.job.dto.JobResponse;
 import com.jobportal.job.service.JobService;
