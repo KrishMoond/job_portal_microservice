@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS jobs (
+    id VARCHAR(36) PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    company VARCHAR(150) NOT NULL,
+    location VARCHAR(100) NOT NULL,
+    salary VARCHAR(50),
+    description TEXT,
+    recruiter_id VARCHAR(36) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

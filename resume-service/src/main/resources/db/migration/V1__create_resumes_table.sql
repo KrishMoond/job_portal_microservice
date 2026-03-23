@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS resumes (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    file_url VARCHAR(500) NOT NULL,
+    file_name VARCHAR(200),
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
