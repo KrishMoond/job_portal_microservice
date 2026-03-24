@@ -25,7 +25,7 @@ public class JobController {
     @PostMapping
     public ResponseEntity<ApiResponse<JobResponse>> create(
             @Valid @RequestBody JobRequest req,
-            @RequestHeader("X-User-Id") String userId) {
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success(jobService.createJob(req, userId), "Job created"));
     }

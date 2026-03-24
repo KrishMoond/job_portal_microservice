@@ -1,25 +1,45 @@
 package com.jobportal.application.messaging;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jobportal.application.outbox.OutboxEvent;
+import com.jobportal.application.outbox.OutboxEventRepository;
 import com.jobportal.common.events.JobAppliedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jms.core.JmsTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class ApplicationEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationEventPublisher.class);
-    public static final String JOB_APPLIED_QUEUE = "job.applied.queue";
+    public static final String JOB_APPLIED_NOTIFICATION_QUEUE = "job.applied.notification.queue";
+    public static final String JOB_APPLIED_ANALYTICS_QUEUE    = "job.applied.analytics.queue";
 
-    private final JmsTemplate appJmsTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
-    public ApplicationEventPublisher(JmsTemplate appJmsTemplate) {
-        this.appJmsTemplate = appJmsTemplate;
+    public ApplicationEventPublisher(OutboxEventRepository outboxEventRepository,
+                                     @Qualifier("appObjectMapper") ObjectMapper objectMapper) {
+        this.outboxEventRepository = outboxEventRepository;
+        this.objectMapper = objectMapper;
     }
 
+    @Transactional
     public void publishJobApplied(JobAppliedEvent event) {
-        log.info("Publishing JobAppliedEvent for applicationId: {}", event.getApplicationId());
-        appJmsTemplate.convertAndSend(JOB_APPLIED_QUEUE, event);
+        String payload = toJson(event);
+        outboxEventRepository.save(new OutboxEvent("JOB_APPLIED", JOB_APPLIED_NOTIFICATION_QUEUE, payload));
+        outboxEventRepository.save(new OutboxEvent("JOB_APPLIED", JOB_APPLIED_ANALYTICS_QUEUE, payload));
+        log.info("[OUTBOX] Saved JobAppliedEvent to outbox | applicationId={}", event.getApplicationId());
+    }
+
+    private String toJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize event", e);
+        }
     }
 }

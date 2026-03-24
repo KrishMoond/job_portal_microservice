@@ -24,13 +24,18 @@ public class ActiveMQConfig {
     }
 
     @Bean
+    public ObjectMapper appObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        return mapper;
+    }
+
+    @Bean
     public MappingJackson2MessageConverter appMessageConverter() {
         MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
         converter.setTargetType(MessageType.TEXT);
         converter.setTypeIdPropertyName("_type");
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        converter.setObjectMapper(mapper);
+        converter.setObjectMapper(appObjectMapper());
         return converter;
     }
 

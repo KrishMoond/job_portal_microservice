@@ -27,7 +27,7 @@ public class NotificationConsumer {
     }
 
     // destination must exactly match JobEventPublisher.JOB_CREATED_QUEUE
-    @JmsListener(destination = "job.created.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "job.created.notification.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobCreated(JobCreatedEvent event) {
         log.info("[JMS-CONSUMER] Received JobCreatedEvent | jobId={} | title={}", event.getJobId(), event.getTitle());
         String subject = "New Job Posted: " + event.getTitle();
@@ -37,7 +37,7 @@ public class NotificationConsumer {
         log.info("[JMS-CONSUMER] Processed JobCreatedEvent | jobId={}", event.getJobId());
     }
 
-    @JmsListener(destination = "job.applied.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "job.applied.notification.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobApplied(JobAppliedEvent event) {
         log.info("[JMS-CONSUMER] Received JobAppliedEvent | jobId={} | candidateId={}", event.getJobId(), event.getCandidateId());
         String subject = "Application Submitted: " + event.getJobTitle();
@@ -49,7 +49,7 @@ public class NotificationConsumer {
         log.info("[JMS-CONSUMER] Processed JobAppliedEvent | jobId={}", event.getJobId());
     }
 
-    @JmsListener(destination = "job.closed.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "job.closed.notification.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobClosed(JobClosedEvent event) {
         log.info("[JMS-CONSUMER] Received JobClosedEvent | jobId={}", event.getJobId());
         String subject = "Job Closed: " + event.getTitle();
@@ -58,7 +58,7 @@ public class NotificationConsumer {
         log.info("[JMS-CONSUMER] Processed JobClosedEvent | jobId={}", event.getJobId());
     }
 
-    @JmsListener(destination = "resume.uploaded.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "resume.uploaded.notification.queue", containerFactory = "jmsListenerContainerFactory")
     public void onResumeUploaded(ResumeUploadedEvent event) {
         log.info("[JMS-CONSUMER] Received ResumeUploadedEvent | userId={} | resumeId={}", event.getUserId(), event.getResumeId());
         String subject = "Resume Upload Successful";

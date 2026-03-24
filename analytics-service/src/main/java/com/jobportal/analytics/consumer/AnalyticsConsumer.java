@@ -21,7 +21,7 @@ public class AnalyticsConsumer {
         this.metricsService = metricsService;
     }
 
-    @JmsListener(destination = "job.created.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "job.created.analytics.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobCreated(JobCreatedEvent event) {
         log.info("Analytics: Job created - {}", event.getJobId());
         AnalyticsEvent ae = new AnalyticsEvent();
@@ -32,7 +32,7 @@ public class AnalyticsConsumer {
         metricsService.record(ae);
     }
 
-    @JmsListener(destination = "job.applied.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "job.applied.analytics.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobApplied(JobAppliedEvent event) {
         log.info("Analytics: Application - job:{} candidate:{}", event.getJobId(), event.getCandidateId());
         AnalyticsEvent ae = new AnalyticsEvent();
@@ -43,7 +43,7 @@ public class AnalyticsConsumer {
         metricsService.record(ae);
     }
 
-    @JmsListener(destination = "resume.uploaded.queue", containerFactory = "jmsListenerContainerFactory")
+    @JmsListener(destination = "resume.uploaded.analytics.queue", containerFactory = "jmsListenerContainerFactory")
     public void onResumeUploaded(ResumeUploadedEvent event) {
         log.info("Analytics: Resume uploaded by user {}", event.getUserId());
         AnalyticsEvent ae = new AnalyticsEvent();

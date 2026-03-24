@@ -16,6 +16,12 @@ public class SearchService {
     }
 
     public List<JobSearchRecord> search(String keyword, String location) {
-        return jobSearchRepository.search(keyword, location);
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        boolean hasLocation = location != null && !location.isBlank();
+
+        if (hasKeyword && hasLocation) return jobSearchRepository.findByKeywordAndLocation(keyword, location);
+        if (hasKeyword)                return jobSearchRepository.findByKeyword(keyword);
+        if (hasLocation)               return jobSearchRepository.findByLocationContaining(location);
+        return jobSearchRepository.findByStatus("OPEN");
     }
 }

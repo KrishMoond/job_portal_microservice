@@ -20,29 +20,32 @@ public class ActiveMQConfig {
     @Value("${spring.activemq.password}") private String password;
 
     @Bean
-    public ActiveMQConnectionFactory connectionFactory() {
+    public ActiveMQConnectionFactory jobConnectionFactory() {
         ActiveMQConnectionFactory cf = new ActiveMQConnectionFactory(user, password, brokerUrl);
         cf.setTrustAllPackages(true);
         return cf;
     }
 
     @Bean
-    public MappingJackson2MessageConverter messageConverter() {
-        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
-        converter.setTargetType(MessageType.TEXT);
-        // _type header is used by the consumer to deserialize to the correct class
-        converter.setTypeIdPropertyName("_type");
+    public ObjectMapper jobObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-        converter.setObjectMapper(mapper);
+        return mapper;
+    }
+
+    @Bean
+    public MappingJackson2MessageConverter jobMessageConverter() {
+        MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+        converter.setTargetType(MessageType.TEXT);
+        converter.setTypeIdPropertyName("_type");
+        converter.setObjectMapper(jobObjectMapper());
         return converter;
     }
 
     @Bean
-    public JmsTemplate jmsTemplate() {
-        JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory());
-        jmsTemplate.setMessageConverter(messageConverter());
-        // false = point-to-point queues (reliable, no lost messages on consumer restart)
+    public JmsTemplate jobJmsTemplate() {
+        JmsTemplate jmsTemplate = new JmsTemplate(jobConnectionFactory());
+        jmsTemplate.setMessageConverter(jobMessageConverter());
         jmsTemplate.setPubSubDomain(false);
         jmsTemplate.setDeliveryPersistent(true);
         return jmsTemplate;

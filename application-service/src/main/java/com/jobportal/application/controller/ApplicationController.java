@@ -26,8 +26,11 @@ public class ApplicationController {
     @PostMapping
     public ResponseEntity<ApiResponse<JobApplication>> apply(
             @Valid @RequestBody ApplyRequest req,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
             @RequestHeader(value = "X-User-Role", required = false, defaultValue = "JOB_SEEKER") String role) {
         if (!"JOB_SEEKER".equals(role)) throw new ForbiddenException("Only job seekers can apply for jobs");
+        // If X-User-Id is present (via gateway), override candidateId from header
+        if (!userId.isBlank()) req.setCandidateId(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success(applicationService.apply(req), "Application submitted"));
     }

@@ -36,19 +36,38 @@ public class ApplicationService {
 
     @SuppressWarnings("unchecked")
     public JobApplication apply(ApplyRequest req) {
+        // 1. Fetch job via Feign — fail fast if job not found
+        Map<String, Object> jobData = null;
+        try {
+            Map<String, Object> jobResp = jobServiceClient.getJobById(req.getJobId());
+            jobData = (Map<String, Object>) jobResp.get("data");
+        } catch (Exception e) {
+            throw new ResourceNotFoundException("Job not found or job-service unavailable: " + req.getJobId());
+        }
+        if (jobData == null) throw new ResourceNotFoundException("Job not found: " + req.getJobId());
+
+        // 2. Check job status
+        String jobStatus = (String) jobData.get("status");
+        if ("CLOSED".equals(jobStatus))
+            throw new BadRequestException("Cannot apply for a closed job");
+
+        // 3. Check duplicate
         if (applicationRepository.existsByJobIdAndCandidateId(req.getJobId(), req.getCandidateId()))
             throw new BadRequestException("Already applied for this job");
 
-        Map<String, Object> jobResp = jobServiceClient.getJobById(req.getJobId());
-        Map<String, Object> jobData = (Map<String, Object>) jobResp.get("data");
-        if (jobData == null) throw new ResourceNotFoundException("Job not found: " + req.getJobId());
         String jobTitle = (String) jobData.get("title");
 
-        Map<String, Object> userResp = userServiceClient.getUserById(req.getCandidateId());
-        Map<String, Object> userData = (Map<String, Object>) userResp.get("data");
-        if (userData == null) throw new ResourceNotFoundException("User not found: " + req.getCandidateId());
-        String candidateEmail = (String) userData.get("email");
+        // 4. Fetch candidate email — optional, don't block if user-service unavailable
+        String candidateEmail = null;
+        try {
+            Map<String, Object> userResp = userServiceClient.getUserById(req.getCandidateId());
+            Map<String, Object> userData = (Map<String, Object>) userResp.get("data");
+            if (userData != null) candidateEmail = (String) userData.get("email");
+        } catch (Exception e) {
+            // email is optional — proceed without it
+        }
 
+        // 5. Save and publish
         JobApplication application = new JobApplication();
         application.setJobId(req.getJobId());
         application.setJobTitle(jobTitle);
@@ -57,10 +76,9 @@ public class ApplicationService {
         application.setResumeId(req.getResumeId());
         application = applicationRepository.save(application);
 
-        JobAppliedEvent event = new JobAppliedEvent(
+        eventPublisher.publishJobApplied(new JobAppliedEvent(
             application.getId(), req.getJobId(), jobTitle,
-            req.getCandidateId(), candidateEmail);
-        eventPublisher.publishJobApplied(event);
+            req.getCandidateId(), candidateEmail));
 
         return application;
     }

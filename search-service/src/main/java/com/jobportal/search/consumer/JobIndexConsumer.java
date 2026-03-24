@@ -20,7 +20,7 @@ public class JobIndexConsumer {
         this.jobSearchRepository = jobSearchRepository;
     }
 
-    @JmsListener(destination = "job.created.topic")
+    @JmsListener(destination = "job.created.search.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobCreated(JobCreatedEvent event) {
         log.info("Indexing new job: {}", event.getJobId());
         JobSearchRecord record = new JobSearchRecord();
@@ -28,12 +28,14 @@ public class JobIndexConsumer {
         record.setTitle(event.getTitle());
         record.setCompany(event.getCompany());
         record.setLocation(event.getLocation());
+        record.setSalary(event.getSalary());
+        record.setDescription(event.getDescription());
         record.setRecruiterId(event.getRecruiterId());
         record.setStatus("OPEN");
         jobSearchRepository.save(record);
     }
 
-    @JmsListener(destination = "job.closed.topic")
+    @JmsListener(destination = "job.closed.search.queue", containerFactory = "jmsListenerContainerFactory")
     public void onJobClosed(JobClosedEvent event) {
         log.info("Marking job as closed in index: {}", event.getJobId());
         jobSearchRepository.findByJobId(event.getJobId()).ifPresent(record -> {
