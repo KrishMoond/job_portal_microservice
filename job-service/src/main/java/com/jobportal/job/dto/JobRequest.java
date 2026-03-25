@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public class JobRequest {
 
     @NotBlank private String title;
-    @NotBlank private String company;
+    @NotBlank private String companyId;
     @NotBlank private String location;
     private String salary;
     private String description;
@@ -14,8 +14,8 @@ public class JobRequest {
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
-    public String getCompany() { return company; }
-    public void setCompany(String company) { this.company = company; }
+    public String getCompanyId() { return companyId; }
+    public void setCompanyId(String companyId) { this.companyId = companyId; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getSalary() { return salary; }

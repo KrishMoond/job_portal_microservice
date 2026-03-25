@@ -41,8 +41,12 @@ public class UserService {
     public UserResponse update(String userId, RegisterRequest req) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        if (!user.getEmail().equals(req.getEmail()) && userRepository.existsByEmail(req.getEmail()))
+            throw new BadRequestException("Email already in use");
         user.setName(req.getName());
         user.setEmail(req.getEmail());
+        if (req.getPassword() != null && !req.getPassword().isBlank())
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
         return toResponse(userRepository.save(user));
     }
 

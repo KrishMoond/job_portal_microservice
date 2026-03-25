@@ -1,6 +1,7 @@
 package com.jobportal.user.controller;
 
 import com.jobportal.common.dto.ApiResponse;
+import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.user.dto.LoginRequest;
 import com.jobportal.user.dto.RegisterRequest;
 import com.jobportal.user.dto.UserResponse;
@@ -48,7 +49,15 @@ public class UserController {
 
     @PutMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
-            @PathVariable String userId, @Valid @RequestBody RegisterRequest req) {
+            @PathVariable String userId, 
+            @Valid @RequestBody RegisterRequest req,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String requestUserId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "JOB_SEEKER") String role) {
+        
+        if (!"ADMIN".equals(role) && !userId.equals(requestUserId)) {
+            throw new ForbiddenException("You can only update your own profile");
+        }
+        
         return ResponseEntity.ok(ApiResponse.success(userService.update(userId, req), "User updated"));
     }
 }

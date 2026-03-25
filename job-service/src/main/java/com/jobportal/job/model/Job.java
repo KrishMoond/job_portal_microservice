@@ -11,6 +11,7 @@ public class Job {
     @Id private String id;
     @Column(nullable = false) private String title;
     @Column(nullable = false) private String company;
+    @Column(name = "company_id") private String companyId;
     @Column(nullable = false) private String location;
     private String salary;
     @Column(columnDefinition = "TEXT") private String description;
@@ -44,6 +45,8 @@ public class Job {
     public void setTitle(String title) { this.title = title; }
     public String getCompany() { return company; }
     public void setCompany(String company) { this.company = company; }
+    public String getCompanyId() { return companyId; }
+    public void setCompanyId(String companyId) { this.companyId = companyId; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getSalary() { return salary; }

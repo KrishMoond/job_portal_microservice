@@ -25,15 +25,26 @@ public class ResumeController {
     @PostMapping
     public ResponseEntity<ApiResponse<ResumeResponse>> upload(
             @Valid @RequestBody ResumeRequest req,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
             @RequestHeader(value = "X-User-Role", required = false, defaultValue = "JOB_SEEKER") String role) {
         if (!"JOB_SEEKER".equals(role)) throw new ForbiddenException("Only job seekers can upload resumes");
+        if (!userId.isBlank()) req.setUserId(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success(resumeService.upload(req), "Resume uploaded"));
     }
 
     @GetMapping("/{resumeId}")
-    public ResponseEntity<ApiResponse<ResumeResponse>> getById(@PathVariable String resumeId) {
-        return ResponseEntity.ok(ApiResponse.success(resumeService.getById(resumeId), "Resume fetched"));
+    public ResponseEntity<ApiResponse<ResumeResponse>> getById(
+            @PathVariable String resumeId,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String requestUserId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "JOB_SEEKER") String role) {
+        
+        ResumeResponse resume = resumeService.getById(resumeId);
+        if (!"ADMIN".equals(role) && !"RECRUITER".equals(role) && !resume.getUserId().equals(requestUserId)) {
+            throw new ForbiddenException("You can only view your own resume");
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success(resume, "Resume fetched"));
     }
 
     @GetMapping("/user/{userId}")

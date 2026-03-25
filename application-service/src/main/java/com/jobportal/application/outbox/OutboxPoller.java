@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -27,7 +28,7 @@ public class OutboxPoller {
     @Scheduled(fixedDelay = 5000)
     @Transactional
     public void processOutboxEvents() {
-        List<OutboxEvent> events = outboxEventRepository.findByProcessedFalseOrderByCreatedAtAsc();
+        List<OutboxEvent> events = outboxEventRepository.findByProcessedFalseOrderByCreatedAtAsc(PageRequest.of(0, 100));
         if (events.isEmpty()) return;
 
         log.info("[OUTBOX] Processing {} pending event(s)", events.size());
@@ -44,15 +45,18 @@ public class OutboxPoller {
                 outboxEventRepository.save(event);
                 log.info("[OUTBOX] Sent eventType={} to={}", eventType, event.getDestination());
             } catch (Exception e) {
-                log.error("[OUTBOX] Failed eventType={} dest={} error={}",
+                log.error("[OUTBOX] Failed eventType={} dest={} error={}. Marking processed to prevent blocking.",
                     event.getEventType(), event.getDestination(), e.getMessage(), e);
+                event.setProcessed(true); // Drop/dead-letter to prevent infinite retry blocking
+                outboxEventRepository.save(event);
             }
         }
     }
 
     private String resolveTypeClass(String eventType) {
         return switch (eventType) {
-            case "JOB_APPLIED" -> "com.jobportal.common.events.JobAppliedEvent";
+            case "JOB_APPLIED"          -> "com.jobportal.common.events.JobAppliedEvent";
+            case "INTERVIEW_SCHEDULED"  -> "com.jobportal.common.events.InterviewScheduledEvent";
             default -> eventType;
         };
     }

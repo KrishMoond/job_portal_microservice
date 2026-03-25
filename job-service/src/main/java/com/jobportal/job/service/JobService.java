@@ -35,42 +35,20 @@ public class JobService {
         this.userServiceClient = userServiceClient;
     }
 
-    @SuppressWarnings("unchecked")
     public JobResponse createJob(JobRequest req, String userId) {
-        // Verify role from user-service only when userId is provided (skipped in Swagger/direct testing)
-        if (userId != null && !userId.isBlank()) {
-            try {
-                Map<String, Object> userResp = userServiceClient.getUserById(userId);
-                Map<String, Object> userData = (Map<String, Object>) userResp.get("data");
-                if (userData == null)
-                    throw new ResourceNotFoundException("User not found: " + userId);
-                String role = (String) userData.get("role");
-                if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
-                    throw new ForbiddenException("Only recruiters and admins can post jobs");
-            } catch (ForbiddenException | ResourceNotFoundException e) {
-                throw e; // re-throw business exceptions
-            } catch (Exception e) {
-                // user-service unavailable — allow job creation (Swagger/dev mode)
-            }
-        }
+        validateRecruiterRole(userId);
 
         Job job = new Job();
         job.setTitle(req.getTitle());
-        job.setCompany(req.getCompany());
+        job.setCompanyId(req.getCompanyId());
+        job.setCompany(resolveCompanyName(req.getCompanyId()));
         job.setLocation(req.getLocation());
         job.setSalary(req.getSalary());
         job.setDescription(req.getDescription());
         job.setRecruiterId(userId);
         job = jobRepository.save(job);
 
-        try {
-            eventPublisher.publishJobCreated(new JobCreatedEvent(
-                job.getId(), job.getTitle(), job.getCompany(), job.getLocation(),
-                job.getSalary(), job.getDescription(), userId));
-        } catch (Exception e) {
-            log.error("[JMS] Failed to publish JobCreatedEvent for jobId={}", job.getId(), e);
-        }
-
+        publishJobCreated(job, userId);
         return toResponse(job);
     }
 
@@ -86,7 +64,6 @@ public class JobService {
     public JobResponse closeJob(String jobId, String requesterId, String role) {
         Job job = jobRepository.findById(jobId)
             .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
-        // Skip ownership check when requesterId is blank (Swagger/direct testing)
         boolean isBlankRequester = requesterId == null || requesterId.isBlank();
         if (!isBlankRequester && !"ADMIN".equals(role) && !requesterId.equals(job.getRecruiterId()))
             throw new ForbiddenException("You can only close your own jobs");
@@ -94,18 +71,65 @@ public class JobService {
             throw new BadRequestException("Job is already closed");
         job.setStatus(Job.Status.CLOSED);
         job = jobRepository.save(job);
+        publishJobClosed(job);
+        return toResponse(job);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validateRecruiterRole(String userId) {
+        if (userId == null || userId.isBlank()) return;
+        try {
+            Map<String, Object> userResp = userServiceClient.getUserById(userId);
+            Map<String, Object> userData = (Map<String, Object>) userResp.get("data");
+            if (userData == null)
+                throw new ResourceNotFoundException("User not found: " + userId);
+            String role = (String) userData.get("role");
+            if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
+                throw new ForbiddenException("Only recruiters and admins can post jobs");
+        } catch (ForbiddenException | ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[Feign] user-service unavailable during role check for userId={}, proceeding", userId, e);
+        }
+    }
+
+    private String resolveCompanyName(String companyId) {
+        try {
+            Map<String, Object> companyResp = userServiceClient.getCompanyById(companyId);
+            if (companyResp == null)
+                throw new ResourceNotFoundException("Company not found: " + companyId);
+            return (String) companyResp.get("name");
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[Feign] Could not resolve company name for companyId={}, using id as fallback", companyId, e);
+            return companyId;
+        }
+    }
+
+    private void publishJobCreated(Job job, String userId) {
+        try {
+            eventPublisher.publishJobCreated(new JobCreatedEvent(
+                job.getId(), job.getTitle(), job.getCompany(), job.getLocation(),
+                job.getSalary(), job.getDescription(), userId));
+        } catch (Exception e) {
+            log.error("[JMS] Failed to publish JobCreatedEvent for jobId={}", job.getId(), e);
+        }
+    }
+
+    private void publishJobClosed(Job job) {
         try {
             eventPublisher.publishJobClosed(new JobClosedEvent(job.getId(), job.getTitle(), job.getRecruiterId()));
         } catch (Exception e) {
             log.error("[JMS] Failed to publish JobClosedEvent for jobId={}", job.getId(), e);
         }
-        return toResponse(job);
     }
 
     private JobResponse toResponse(Job j) {
         JobResponse r = new JobResponse();
         r.setJobId(j.getId());
         r.setTitle(j.getTitle());
+        r.setCompanyId(j.getCompanyId());
         r.setCompany(j.getCompany());
         r.setLocation(j.getLocation());
         r.setSalary(j.getSalary());

@@ -26,37 +26,65 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    // Fully public — no token required
     private static final List<String> PUBLIC_PATHS = List.of(
         "/api/users/register",
         "/api/users/login",
         "/api/search/jobs",
-        "/actuator"
+        "/actuator",
+        "/swagger-ui",
+        "/v3/api-docs",
+        "/webjars"
     );
 
-    // path prefix -> HTTP method -> allowed roles (empty list = all authenticated roles)
-    private static final Map<String, Map<HttpMethod, List<String>>> ROLE_RULES = Map.of(
-        "/api/jobs", Map.of(
+    // Map.of() supports max 10 entries — use Map.ofEntries() for 11+
+    private static final Map<String, Map<HttpMethod, List<String>>> ROLE_RULES = Map.ofEntries(
+        Map.entry("/api/jobs", Map.of(
             HttpMethod.POST, List.of("RECRUITER", "ADMIN"),
             HttpMethod.PUT,  List.of("RECRUITER", "ADMIN"),
             HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
-        ),
-        "/api/applications", Map.of(
+        )),
+        Map.entry("/api/applications", Map.of(
             HttpMethod.POST, List.of("JOB_SEEKER"),
-            HttpMethod.PUT,  List.of("RECRUITER"),
+            HttpMethod.PUT,  List.of("RECRUITER", "ADMIN"),
             HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
-        ),
-        "/api/resumes", Map.of(
+        )),
+        Map.entry("/api/resumes", Map.of(
             HttpMethod.POST, List.of("JOB_SEEKER"),
             HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
-        ),
-        "/api/analytics", Map.of(
-            HttpMethod.GET,  List.of("ADMIN")
-        ),
-        "/api/users", Map.of(
+        )),
+        Map.entry("/api/analytics", Map.of(
+            HttpMethod.GET,  List.of("ADMIN", "RECRUITER")
+        )),
+        Map.entry("/api/users", Map.of(
             HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN"),
             HttpMethod.PUT,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
-        )
+        )),
+        Map.entry("/api/bookmarks", Map.of(
+            HttpMethod.GET,    List.of("JOB_SEEKER"),
+            HttpMethod.POST,   List.of("JOB_SEEKER"),
+            HttpMethod.DELETE, List.of("JOB_SEEKER")
+        )),
+        Map.entry("/api/companies", Map.of(
+            HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN"),
+            HttpMethod.POST, List.of("RECRUITER", "ADMIN"),
+            HttpMethod.PUT,  List.of("RECRUITER", "ADMIN")
+        )),
+        Map.entry("/api/notifications", Map.of(
+            HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN"),
+            HttpMethod.PUT,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
+        )),
+        Map.entry("/api/interviews", Map.of(
+            HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN"),
+            HttpMethod.POST, List.of("RECRUITER", "ADMIN"),
+            HttpMethod.PUT,  List.of("RECRUITER", "ADMIN")
+        )),
+        Map.entry("/api/messages", Map.of(
+            HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN"),
+            HttpMethod.POST, List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
+        )),
+        Map.entry("/api/recommendations", Map.of(
+            HttpMethod.GET,  List.of("JOB_SEEKER")
+        ))
     );
 
     @Override
@@ -87,16 +115,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         String role = claims.get("role", String.class);
 
-        // Check role rules for this path + method
-        for (Map.Entry<String, Map<HttpMethod, List<String>>> entry : ROLE_RULES.entrySet()) {
-            if (path.startsWith(entry.getKey())) {
-                List<String> allowedRoles = entry.getValue().get(method);
-                if (allowedRoles != null && !allowedRoles.contains(role)) {
-                    exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                    return exchange.getResponse().setComplete();
-                }
-                break;
-            }
+        if (!isAuthorized(path, method, role)) {
+            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+            return exchange.getResponse().setComplete();
         }
 
         String userId = claims.getSubject();
@@ -108,6 +129,16 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             .build();
 
         return chain.filter(mutated);
+    }
+
+    private boolean isAuthorized(String path, HttpMethod method, String role) {
+        for (Map.Entry<String, Map<HttpMethod, List<String>>> entry : ROLE_RULES.entrySet()) {
+            if (path.startsWith(entry.getKey())) {
+                List<String> allowedRoles = entry.getValue().get(method);
+                return allowedRoles != null && allowedRoles.contains(role);
+            }
+        }
+        return false;
     }
 
     @Override

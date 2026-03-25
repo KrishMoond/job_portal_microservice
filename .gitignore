@@ -1,12 +1,30 @@
+# Build output
 target/
 *.class
 *.jar
 *.war
-.DS_Store
-*.iml
-.idea/
-*.log
+
+# IDE - Eclipse
 .metadata/
+.classpath
+.project
+.settings/
+*.launch
+
+# IDE - IntelliJ
+.idea/
+*.iml
+
+# IDE - VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
 *.log
-*.class
-target/
+build.log
+
+# Spring Boot
+spring-shell.log

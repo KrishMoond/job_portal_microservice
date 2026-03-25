@@ -10,4 +10,7 @@ import java.util.Map;
 public interface UserServiceClient {
     @GetMapping("/api/users/{userId}")
     Map<String, Object> getUserById(@PathVariable String userId);
+
+    @GetMapping("/api/companies/{companyId}")
+    Map<String, Object> getCompanyById(@PathVariable String companyId);
 }

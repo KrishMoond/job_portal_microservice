@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public class JobResponse {
     private String jobId;
     private String title;
+    private String companyId;
     private String company;
     private String location;
     private String salary;
@@ -20,6 +21,8 @@ public class JobResponse {
     public void setJobId(String jobId) { this.jobId = jobId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+    public String getCompanyId() { return companyId; }
+    public void setCompanyId(String companyId) { this.companyId = companyId; }
     public String getCompany() { return company; }
     public void setCompany(String company) { this.company = company; }
     public String getLocation() { return location; }

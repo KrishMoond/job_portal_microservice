@@ -11,6 +11,8 @@ import com.jobportal.common.events.JobAppliedEvent;
 import com.jobportal.common.exception.BadRequestException;
 import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.common.exception.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +20,8 @@ import java.util.Map;
 
 @Service
 public class ApplicationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ApplicationService.class);
 
     private final ApplicationRepository applicationRepository;
     private final JobServiceClient jobServiceClient;
@@ -64,7 +68,7 @@ public class ApplicationService {
             Map<String, Object> userData = (Map<String, Object>) userResp.get("data");
             if (userData != null) candidateEmail = (String) userData.get("email");
         } catch (Exception e) {
-            // email is optional — proceed without it
+            log.warn("[FEIGN] user-service unavailable for candidateId={}, proceeding without email", req.getCandidateId(), e);
         }
 
         // 5. Save and publish
@@ -85,9 +89,13 @@ public class ApplicationService {
 
     public List<JobApplication> getByJobId(String jobId, String requesterId, String role) {
         if (!"ADMIN".equals(role)) {
-            // recruiter can only see applications for their own jobs
-            Map<String, Object> jobResp = jobServiceClient.getJobById(jobId);
-            Map<String, Object> jobData = (Map<String, Object>) jobResp.get("data");
+            Map<String, Object> jobData = null;
+            try {
+                Map<String, Object> jobResp = jobServiceClient.getJobById(jobId);
+                jobData = (Map<String, Object>) jobResp.get("data");
+            } catch (Exception e) {
+                throw new ResourceNotFoundException("Job not found or job-service unavailable: " + jobId);
+            }
             if (jobData == null) throw new ResourceNotFoundException("Job not found: " + jobId);
             String recruiterId = (String) jobData.get("recruiterId");
             if (!recruiterId.equals(requesterId))
@@ -107,9 +115,13 @@ public class ApplicationService {
         JobApplication app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
         if (!"ADMIN".equals(role)) {
-            // recruiter can only update status for applications on their own jobs
-            Map<String, Object> jobResp = jobServiceClient.getJobById(app.getJobId());
-            Map<String, Object> jobData = (Map<String, Object>) jobResp.get("data");
+            Map<String, Object> jobData = null;
+            try {
+                Map<String, Object> jobResp = jobServiceClient.getJobById(app.getJobId());
+                jobData = (Map<String, Object>) jobResp.get("data");
+            } catch (Exception e) {
+                throw new ResourceNotFoundException("Job not found or job-service unavailable: " + app.getJobId());
+            }
             if (jobData == null) throw new ResourceNotFoundException("Job not found: " + app.getJobId());
             String recruiterId = (String) jobData.get("recruiterId");
             if (!recruiterId.equals(requesterId))
