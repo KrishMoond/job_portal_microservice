@@ -8,5 +8,5 @@ import java.util.Map;
 @FeignClient(name = "job-service")
 public interface JobServiceClient {
     @GetMapping("/api/jobs/{jobId}")
-    Map<String, Object> getJobById(@PathVariable String jobId);
+    Map<String, Object> getJobById(@PathVariable("jobId") String jobId);
 }

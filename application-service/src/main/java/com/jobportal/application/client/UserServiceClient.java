@@ -8,5 +8,5 @@ import java.util.Map;
 @FeignClient(name = "user-service")
 public interface UserServiceClient {
     @GetMapping("/api/users/{userId}")
-    Map<String, Object> getUserById(@PathVariable String userId);
+    Map<String, Object> getUserById(@PathVariable("userId") String userId);
 }

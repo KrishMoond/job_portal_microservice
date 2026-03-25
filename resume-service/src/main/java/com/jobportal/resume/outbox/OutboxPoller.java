@@ -2,8 +2,8 @@ package com.jobportal.resume.outbox;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jms.core.JmsTemplate;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,44 +16,30 @@ public class OutboxPoller {
     private static final Logger log = LoggerFactory.getLogger(OutboxPoller.class);
 
     private final OutboxEventRepository outboxEventRepository;
-    private final JmsTemplate jmsTemplate;
+    private final RabbitTemplate rabbitTemplate;
 
-    public OutboxPoller(OutboxEventRepository outboxEventRepository,
-                        @Qualifier("resumeJmsTemplate") JmsTemplate jmsTemplate) {
+    public OutboxPoller(OutboxEventRepository outboxEventRepository, RabbitTemplate rabbitTemplate) {
         this.outboxEventRepository = outboxEventRepository;
-        this.jmsTemplate = jmsTemplate;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Scheduled(fixedDelay = 5000)
     @Transactional
     public void processOutboxEvents() {
-        List<OutboxEvent> events = outboxEventRepository.findByProcessedFalseOrderByCreatedAtAsc();
+        List<OutboxEvent> events = outboxEventRepository.findByProcessedFalseOrderByCreatedAtAsc(PageRequest.of(0, 100));
         if (events.isEmpty()) return;
 
         log.info("[OUTBOX] Processing {} pending event(s)", events.size());
         for (OutboxEvent event : events) {
             try {
-                String payload = event.getPayload();
-                String eventType = event.getEventType();
-                jmsTemplate.send(event.getDestination(), session -> {
-                    jakarta.jms.TextMessage msg = session.createTextMessage(payload);
-                    msg.setStringProperty("_type", resolveTypeClass(eventType));
-                    return msg;
-                });
+                rabbitTemplate.convertAndSend(event.getDestination(), event.getPayload());
                 event.setProcessed(true);
                 outboxEventRepository.save(event);
-                log.info("[OUTBOX] Sent eventType={} to={}", eventType, event.getDestination());
+                log.info("[OUTBOX] Sent eventType={} to={}", event.getEventType(), event.getDestination());
             } catch (Exception e) {
-                log.error("[OUTBOX] Failed eventType={} dest={} error={}",
+                log.error("[OUTBOX] Failed eventType={} dest={} error={}. Will retry on next poll.",
                     event.getEventType(), event.getDestination(), e.getMessage(), e);
             }
         }
-    }
-
-    private String resolveTypeClass(String eventType) {
-        return switch (eventType) {
-            case "RESUME_UPLOADED" -> "com.jobportal.common.events.ResumeUploadedEvent";
-            default -> eventType;
-        };
     }
 }
