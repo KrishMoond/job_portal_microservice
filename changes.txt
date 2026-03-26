@@ -1,0 +1,454 @@
+diff --git a/analytics-service/src/main/java/com/jobportal/analytics/AnalyticsServiceApplication.java b/analytics-service/src/main/java/com/jobportal/analytics/AnalyticsServiceApplication.java
+index 7b04d8c..7e9c461 100644
+--- a/analytics-service/src/main/java/com/jobportal/analytics/AnalyticsServiceApplication.java
++++ b/analytics-service/src/main/java/com/jobportal/analytics/AnalyticsServiceApplication.java
+@@ -4,8 +4,11 @@ import org.springframework.boot.SpringApplication;
+ import org.springframework.boot.autoconfigure.SpringBootApplication;
+ import org.springframework.scheduling.annotation.EnableScheduling;
+ 
++import org.springframework.amqp.rabbit.annotation.EnableRabbit;
++
+ @SpringBootApplication
+ @EnableScheduling
++@EnableRabbit
+ public class AnalyticsServiceApplication {
+     public static void main(String[] args) {
+         SpringApplication.run(AnalyticsServiceApplication.class, args);
+diff --git a/analytics-service/src/main/java/com/jobportal/analytics/config/RabbitMQConfig.java b/analytics-service/src/main/java/com/jobportal/analytics/config/RabbitMQConfig.java
+index 33fe9af..1d29354 100644
+--- a/analytics-service/src/main/java/com/jobportal/analytics/config/RabbitMQConfig.java
++++ b/analytics-service/src/main/java/com/jobportal/analytics/config/RabbitMQConfig.java
+@@ -1,14 +1,29 @@
+ package com.jobportal.analytics.config;
+ 
+ import org.springframework.amqp.core.Queue;
++import org.springframework.amqp.core.QueueBuilder;
+ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+ import org.springframework.amqp.rabbit.core.RabbitAdmin;
++import org.springframework.amqp.rabbit.core.RabbitTemplate;
++import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+ @Configuration
+ public class RabbitMQConfig {
+ 
++    @Bean
++    public Jackson2JsonMessageConverter messageConverter() {
++        return new Jackson2JsonMessageConverter();
++    }
++
++    @Bean
++    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
++        RabbitTemplate template = new RabbitTemplate(connectionFactory);
++        template.setMessageConverter(messageConverter());
++        return template;
++    }
++
+     @Bean
+     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+@@ -16,7 +31,18 @@ public class RabbitMQConfig {
+         return admin;
+     }
+ 
+-    @Bean public Queue jobCreatedAnalyticsQueue()     { return new Queue("job.created.analytics.queue",     true); }
+-    @Bean public Queue jobAppliedAnalyticsQueue()     { return new Queue("job.applied.analytics.queue",     true); }
+-    @Bean public Queue resumeUploadedAnalyticsQueue() { return new Queue("resume.uploaded.analytics.queue", true); }
++    @Bean
++    public Queue jobCreatedAnalyticsQueue() {
++        return QueueBuilder.durable("job.created.analytics.queue").build();
++    }
++
++    @Bean
++    public Queue jobAppliedAnalyticsQueue() {
++        return QueueBuilder.durable("job.applied.analytics.queue").build();
++    }
++
++    @Bean
++    public Queue resumeUploadedAnalyticsQueue() {
++        return QueueBuilder.durable("resume.uploaded.analytics.queue").build();
++    }
+ }
+diff --git a/application-service/src/main/java/com/jobportal/application/ApplicationServiceApplication.java b/application-service/src/main/java/com/jobportal/application/ApplicationServiceApplication.java
+index ccedff0..c0c99de 100644
+--- a/application-service/src/main/java/com/jobportal/application/ApplicationServiceApplication.java
++++ b/application-service/src/main/java/com/jobportal/application/ApplicationServiceApplication.java
+@@ -5,9 +5,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
+ import org.springframework.cloud.openfeign.EnableFeignClients;
+ import org.springframework.scheduling.annotation.EnableScheduling;
+ 
++import org.springframework.amqp.rabbit.annotation.EnableRabbit;
++
+ @SpringBootApplication
+ @EnableFeignClients
+ @EnableScheduling
++@EnableRabbit
+ public class ApplicationServiceApplication {
+     public static void main(String[] args) {
+         SpringApplication.run(ApplicationServiceApplication.class, args);
+diff --git a/application-service/src/main/java/com/jobportal/application/messaging/RabbitMQConfig.java b/application-service/src/main/java/com/jobportal/application/messaging/RabbitMQConfig.java
+index b76fbe8..21caaed 100644
+--- a/application-service/src/main/java/com/jobportal/application/messaging/RabbitMQConfig.java
++++ b/application-service/src/main/java/com/jobportal/application/messaging/RabbitMQConfig.java
+@@ -2,14 +2,29 @@ package com.jobportal.application.messaging;
+ 
+ import com.fasterxml.jackson.databind.ObjectMapper;
+ import org.springframework.amqp.core.Queue;
++import org.springframework.amqp.core.QueueBuilder;
+ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+ import org.springframework.amqp.rabbit.core.RabbitAdmin;
++import org.springframework.amqp.rabbit.core.RabbitTemplate;
++import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+ @Configuration
+ public class RabbitMQConfig {
+ 
++    @Bean
++    public Jackson2JsonMessageConverter messageConverter() {
++        return new Jackson2JsonMessageConverter();
++    }
++
++    @Bean
++    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
++        RabbitTemplate template = new RabbitTemplate(connectionFactory);
++        template.setMessageConverter(messageConverter());
++        return template;
++    }
++
+     @Bean
+     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+@@ -18,9 +33,22 @@ public class RabbitMQConfig {
+     }
+ 
+     @Bean("appObjectMapper")
+-    public ObjectMapper appObjectMapper() { return new ObjectMapper().findAndRegisterModules(); }
++    public ObjectMapper appObjectMapper() {
++        return new ObjectMapper().findAndRegisterModules();
++    }
+ 
+-    @Bean public Queue jobAppliedNotificationQueue()  { return new Queue("job.applied.notification.queue",         true); }
+-    @Bean public Queue jobAppliedAnalyticsQueue()     { return new Queue("job.applied.analytics.queue",            true); }
+-    @Bean public Queue interviewScheduledNotifQueue() { return new Queue("interview.scheduled.notification.queue", true); }
++    @Bean
++    public Queue jobAppliedNotificationQueue() {
++        return QueueBuilder.durable("job.applied.notification.queue").build();
++    }
++
++    @Bean
++    public Queue jobAppliedAnalyticsQueue() {
++        return QueueBuilder.durable("job.applied.analytics.queue").build();
++    }
++
++    @Bean
++    public Queue interviewScheduledNotifQueue() {
++        return QueueBuilder.durable("interview.scheduled.notification.queue").build();
++    }
+ }
+diff --git a/job-service/src/main/java/com/jobportal/job/JobServiceApplication.java b/job-service/src/main/java/com/jobportal/job/JobServiceApplication.java
+index b970b1e..7f73fe7 100644
+--- a/job-service/src/main/java/com/jobportal/job/JobServiceApplication.java
++++ b/job-service/src/main/java/com/jobportal/job/JobServiceApplication.java
+@@ -5,9 +5,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
+ import org.springframework.cloud.openfeign.EnableFeignClients;
+ import org.springframework.scheduling.annotation.EnableScheduling;
+ 
++import org.springframework.amqp.rabbit.annotation.EnableRabbit;
++
+ @SpringBootApplication
+ @EnableFeignClients
+ @EnableScheduling
++@EnableRabbit
+ public class JobServiceApplication {
+     public static void main(String[] args) {
+         SpringApplication.run(JobServiceApplication.class, args);
+diff --git a/job-service/src/main/java/com/jobportal/job/messaging/RabbitMQConfig.java b/job-service/src/main/java/com/jobportal/job/messaging/RabbitMQConfig.java
+index de312a6..ee215a9 100644
+--- a/job-service/src/main/java/com/jobportal/job/messaging/RabbitMQConfig.java
++++ b/job-service/src/main/java/com/jobportal/job/messaging/RabbitMQConfig.java
+@@ -2,14 +2,23 @@ package com.jobportal.job.messaging;
+ 
+ import com.fasterxml.jackson.databind.ObjectMapper;
+ import org.springframework.amqp.core.Queue;
++import org.springframework.amqp.core.QueueBuilder;
+ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+ import org.springframework.amqp.rabbit.core.RabbitAdmin;
++import org.springframework.amqp.rabbit.core.RabbitTemplate;
++import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+ @Configuration
+ public class RabbitMQConfig {
+ 
++    @Bean
++    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
++        RabbitTemplate template = new RabbitTemplate(connectionFactory);
++        return template;
++    }
++
+     @Bean
+     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+@@ -18,11 +27,32 @@ public class RabbitMQConfig {
+     }
+ 
+     @Bean("jobObjectMapper")
+-    public ObjectMapper jobObjectMapper() { return new ObjectMapper().findAndRegisterModules(); }
++    public ObjectMapper jobObjectMapper() {
++        return new ObjectMapper().findAndRegisterModules();
++    }
++
++    @Bean
++    public Queue jobCreatedSearchQueue() {
++        return QueueBuilder.durable("job.created.search.queue").build();
++    }
++
++    @Bean
++    public Queue jobCreatedNotificationQueue() {
++        return QueueBuilder.durable("job.created.notification.queue").build();
++    }
+ 
+-    @Bean public Queue jobCreatedSearchQueue()       { return new Queue("job.created.search.queue",        true); }
+-    @Bean public Queue jobCreatedNotificationQueue() { return new Queue("job.created.notification.queue",  true); }
+-    @Bean public Queue jobCreatedAnalyticsQueue()    { return new Queue("job.created.analytics.queue",     true); }
+-    @Bean public Queue jobClosedSearchQueue()        { return new Queue("job.closed.search.queue",         true); }
+-    @Bean public Queue jobClosedNotificationQueue()  { return new Queue("job.closed.notification.queue",   true); }
++    @Bean
++    public Queue jobCreatedAnalyticsQueue() {
++        return QueueBuilder.durable("job.created.analytics.queue").build();
++    }
++
++    @Bean
++    public Queue jobClosedSearchQueue() {
++        return QueueBuilder.durable("job.closed.search.queue").build();
++    }
++
++    @Bean
++    public Queue jobClosedNotificationQueue() {
++        return QueueBuilder.durable("job.closed.notification.queue").build();
++    }
+ }
+diff --git a/notification-service/src/main/java/com/jobportal/notification/NotificationServiceApplication.java b/notification-service/src/main/java/com/jobportal/notification/NotificationServiceApplication.java
+index dfc9782..2f27253 100644
+--- a/notification-service/src/main/java/com/jobportal/notification/NotificationServiceApplication.java
++++ b/notification-service/src/main/java/com/jobportal/notification/NotificationServiceApplication.java
+@@ -4,8 +4,11 @@ import org.springframework.boot.SpringApplication;
+ import org.springframework.boot.autoconfigure.SpringBootApplication;
+ import org.springframework.scheduling.annotation.EnableScheduling;
+ 
++import org.springframework.amqp.rabbit.annotation.EnableRabbit;
++
+ @SpringBootApplication
+ @EnableScheduling
++@EnableRabbit
+ public class NotificationServiceApplication {
+     public static void main(String[] args) {
+         SpringApplication.run(NotificationServiceApplication.class, args);
+diff --git a/notification-service/src/main/java/com/jobportal/notification/config/RabbitMQConfig.java b/notification-service/src/main/java/com/jobportal/notification/config/RabbitMQConfig.java
+index 6452e90..fceafd8 100644
+--- a/notification-service/src/main/java/com/jobportal/notification/config/RabbitMQConfig.java
++++ b/notification-service/src/main/java/com/jobportal/notification/config/RabbitMQConfig.java
+@@ -1,14 +1,29 @@
+ package com.jobportal.notification.config;
+ 
+ import org.springframework.amqp.core.Queue;
++import org.springframework.amqp.core.QueueBuilder;
+ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+ import org.springframework.amqp.rabbit.core.RabbitAdmin;
++import org.springframework.amqp.rabbit.core.RabbitTemplate;
++import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+ @Configuration
+ public class RabbitMQConfig {
+ 
++    @Bean
++    public Jackson2JsonMessageConverter messageConverter() {
++        return new Jackson2JsonMessageConverter();
++    }
++
++    @Bean
++    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
++        RabbitTemplate template = new RabbitTemplate(connectionFactory);
++        template.setMessageConverter(messageConverter());
++        return template;
++    }
++
+     @Bean
+     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+@@ -16,9 +31,28 @@ public class RabbitMQConfig {
+         return admin;
+     }
+ 
+-    @Bean public Queue jobCreatedNotificationQueue()     { return new Queue("job.created.notification.queue",        true); }
+-    @Bean public Queue jobAppliedNotificationQueue()     { return new Queue("job.applied.notification.queue",        true); }
+-    @Bean public Queue jobClosedNotificationQueue()      { return new Queue("job.closed.notification.queue",         true); }
+-    @Bean public Queue resumeUploadedNotificationQueue() { return new Queue("resume.uploaded.notification.queue",    true); }
+-    @Bean public Queue interviewScheduledNotifQueue()    { return new Queue("interview.scheduled.notification.queue", true); }
++    @Bean
++    public Queue jobCreatedNotificationQueue() {
++        return QueueBuilder.durable("job.created.notification.queue").build();
++    }
++
++    @Bean
++    public Queue jobAppliedNotificationQueue() {
++        return QueueBuilder.durable("job.applied.notification.queue").build();
++    }
++
++    @Bean
++    public Queue jobClosedNotificationQueue() {
++        return QueueBuilder.durable("job.closed.notification.queue").build();
++    }
++
++    @Bean
++    public Queue resumeUploadedNotificationQueue() {
++        return QueueBuilder.durable("resume.uploaded.notification.queue").build();
++    }
++
++    @Bean
++    public Queue interviewScheduledNotifQueue() {
++        return QueueBuilder.durable("interview.scheduled.notification.queue").build();
++    }
+ }
+diff --git a/resume-service/src/main/java/com/jobportal/resume/ResumeServiceApplication.java b/resume-service/src/main/java/com/jobportal/resume/ResumeServiceApplication.java
+index 76f6010..ecb137f 100644
+--- a/resume-service/src/main/java/com/jobportal/resume/ResumeServiceApplication.java
++++ b/resume-service/src/main/java/com/jobportal/resume/ResumeServiceApplication.java
+@@ -4,8 +4,11 @@ import org.springframework.boot.SpringApplication;
+ import org.springframework.boot.autoconfigure.SpringBootApplication;
+ import org.springframework.scheduling.annotation.EnableScheduling;
+ 
++import org.springframework.amqp.rabbit.annotation.EnableRabbit;
++
+ @SpringBootApplication
+ @EnableScheduling
++@EnableRabbit
+ public class ResumeServiceApplication {
+     public static void main(String[] args) {
+         SpringApplication.run(ResumeServiceApplication.class, args);
+diff --git a/resume-service/src/main/java/com/jobportal/resume/messaging/RabbitMQConfig.java b/resume-service/src/main/java/com/jobportal/resume/messaging/RabbitMQConfig.java
+index 151c1de..6535e78 100644
+--- a/resume-service/src/main/java/com/jobportal/resume/messaging/RabbitMQConfig.java
++++ b/resume-service/src/main/java/com/jobportal/resume/messaging/RabbitMQConfig.java
+@@ -2,14 +2,29 @@ package com.jobportal.resume.messaging;
+ 
+ import com.fasterxml.jackson.databind.ObjectMapper;
+ import org.springframework.amqp.core.Queue;
++import org.springframework.amqp.core.QueueBuilder;
+ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+ import org.springframework.amqp.rabbit.core.RabbitAdmin;
++import org.springframework.amqp.rabbit.core.RabbitTemplate;
++import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+ @Configuration
+ public class RabbitMQConfig {
+ 
++    @Bean
++    public Jackson2JsonMessageConverter messageConverter() {
++        return new Jackson2JsonMessageConverter();
++    }
++
++    @Bean
++    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
++        RabbitTemplate template = new RabbitTemplate(connectionFactory);
++        template.setMessageConverter(messageConverter());
++        return template;
++    }
++
+     @Bean
+     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+@@ -18,8 +33,17 @@ public class RabbitMQConfig {
+     }
+ 
+     @Bean("resumeObjectMapper")
+-    public ObjectMapper resumeObjectMapper() { return new ObjectMapper().findAndRegisterModules(); }
++    public ObjectMapper resumeObjectMapper() {
++        return new ObjectMapper().findAndRegisterModules();
++    }
++
++    @Bean
++    public Queue resumeUploadedNotificationQueue() {
++        return QueueBuilder.durable("resume.uploaded.notification.queue").build();
++    }
+ 
+-    @Bean public Queue resumeUploadedNotificationQueue() { return new Queue("resume.uploaded.notification.queue", true); }
+-    @Bean public Queue resumeUploadedAnalyticsQueue()    { return new Queue("resume.uploaded.analytics.queue",    true); }
++    @Bean
++    public Queue resumeUploadedAnalyticsQueue() {
++        return QueueBuilder.durable("resume.uploaded.analytics.queue").build();
++    }
+ }
+diff --git a/search-service/src/main/java/com/jobportal/search/SearchServiceApplication.java b/search-service/src/main/java/com/jobportal/search/SearchServiceApplication.java
+index 7012e2f..a9a6421 100644
+--- a/search-service/src/main/java/com/jobportal/search/SearchServiceApplication.java
++++ b/search-service/src/main/java/com/jobportal/search/SearchServiceApplication.java
+@@ -3,7 +3,10 @@ package com.jobportal.search;
+ import org.springframework.boot.SpringApplication;
+ import org.springframework.boot.autoconfigure.SpringBootApplication;
+ 
++import org.springframework.amqp.rabbit.annotation.EnableRabbit;
++
+ @SpringBootApplication
++@EnableRabbit
+ public class SearchServiceApplication {
+     public static void main(String[] args) {
+         SpringApplication.run(SearchServiceApplication.class, args);
+diff --git a/search-service/src/main/java/com/jobportal/search/config/RabbitMQConfig.java b/search-service/src/main/java/com/jobportal/search/config/RabbitMQConfig.java
+index 5be44fd..189864b 100644
+--- a/search-service/src/main/java/com/jobportal/search/config/RabbitMQConfig.java
++++ b/search-service/src/main/java/com/jobportal/search/config/RabbitMQConfig.java
+@@ -1,14 +1,29 @@
+ package com.jobportal.search.config;
+ 
+ import org.springframework.amqp.core.Queue;
++import org.springframework.amqp.core.QueueBuilder;
+ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+ import org.springframework.amqp.rabbit.core.RabbitAdmin;
++import org.springframework.amqp.rabbit.core.RabbitTemplate;
++import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ 
+ @Configuration
+ public class RabbitMQConfig {
+ 
++    @Bean
++    public Jackson2JsonMessageConverter messageConverter() {
++        return new Jackson2JsonMessageConverter();
++    }
++
++    @Bean
++    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
++        RabbitTemplate template = new RabbitTemplate(connectionFactory);
++        template.setMessageConverter(messageConverter());
++        return template;
++    }
++
+     @Bean
+     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+         RabbitAdmin admin = new RabbitAdmin(connectionFactory);
+@@ -16,6 +31,13 @@ public class RabbitMQConfig {
+         return admin;
+     }
+ 
+-    @Bean public Queue jobCreatedSearchQueue() { return new Queue("job.created.search.queue", true); }
+-    @Bean public Queue jobClosedSearchQueue()  { return new Queue("job.closed.search.queue",  true); }
++    @Bean
++    public Queue jobCreatedSearchQueue() {
++        return QueueBuilder.durable("job.created.search.queue").build();
++    }
++
++    @Bean
++    public Queue jobClosedSearchQueue() {
++        return QueueBuilder.durable("job.closed.search.queue").build();
++    }
+ }

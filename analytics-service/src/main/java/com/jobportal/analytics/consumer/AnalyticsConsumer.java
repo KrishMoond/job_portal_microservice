@@ -9,9 +9,11 @@ import com.jobportal.common.events.ResumeUploadedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!test")
 public class AnalyticsConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsConsumer.class);

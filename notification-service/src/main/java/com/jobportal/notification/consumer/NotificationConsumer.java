@@ -6,17 +6,19 @@ import com.jobportal.common.events.JobAppliedEvent;
 import com.jobportal.common.events.JobClosedEvent;
 import com.jobportal.common.events.JobCreatedEvent;
 import com.jobportal.common.events.ResumeUploadedEvent;
-import com.jobportal.notification.model.NotificationLog;
-import com.jobportal.notification.repository.NotificationLogRepository;
 import com.jobportal.notification.model.InAppNotification;
+import com.jobportal.notification.model.NotificationLog;
 import com.jobportal.notification.repository.InAppNotificationRepository;
+import com.jobportal.notification.repository.NotificationLogRepository;
 import com.jobportal.notification.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("!test")
 public class NotificationConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationConsumer.class);
@@ -59,9 +61,8 @@ public class NotificationConsumer {
             log.info("[AMQP-CONSUMER] Received JobAppliedEvent | jobId={} | candidateId={}", event.getJobId(), event.getCandidateId());
             String subject = "Application Submitted: " + event.getJobTitle();
             String body = "Your application for " + event.getJobTitle() + " has been submitted successfully.";
-            if (event.getCandidateEmail() != null) {
+            if (event.getCandidateEmail() != null)
                 emailService.sendEmail(event.getCandidateEmail(), subject, body);
-            }
             saveInAppNotification(event.getCandidateId(), body);
             saveLog("JOB_APPLIED", event.getCandidateEmail(), subject, body);
         } catch (Exception e) {

@@ -7,7 +7,6 @@ import com.jobportal.application.outbox.OutboxEventRepository;
 import com.jobportal.common.events.JobAppliedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,7 @@ public class ApplicationEventPublisher {
     private final ObjectMapper objectMapper;
 
     public ApplicationEventPublisher(OutboxEventRepository outboxEventRepository,
-                                     @Qualifier("appObjectMapper") ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper) {
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
     }

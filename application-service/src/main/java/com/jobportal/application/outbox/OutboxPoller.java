@@ -3,6 +3,7 @@ package com.jobportal.application.outbox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Component
+@Profile("!test")
 public class OutboxPoller {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxPoller.class);

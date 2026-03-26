@@ -7,7 +7,6 @@ import com.jobportal.resume.outbox.OutboxEvent;
 import com.jobportal.resume.outbox.OutboxEventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,7 @@ public class ResumeEventPublisher {
     private final ObjectMapper objectMapper;
 
     public ResumeEventPublisher(OutboxEventRepository outboxEventRepository,
-                                @Qualifier("resumeObjectMapper") ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper) {
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
     }

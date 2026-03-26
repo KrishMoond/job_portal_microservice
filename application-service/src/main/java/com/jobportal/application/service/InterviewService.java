@@ -12,7 +12,6 @@ import com.jobportal.common.events.InterviewScheduledEvent;
 import com.jobportal.common.exception.BadRequestException;
 import com.jobportal.common.exception.ResourceNotFoundException;
 import com.jobportal.common.exception.ForbiddenException;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +31,7 @@ public class InterviewService {
     public InterviewService(InterviewRepository interviewRepository,
                             ApplicationRepository applicationRepository,
                             OutboxEventRepository outboxEventRepository,
-                            @Qualifier("appObjectMapper") ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper) {
         this.interviewRepository = interviewRepository;
         this.applicationRepository = applicationRepository;
         this.outboxEventRepository = outboxEventRepository;
