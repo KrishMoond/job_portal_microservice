@@ -25,9 +25,12 @@ public class JobController {
     @PostMapping
     public ResponseEntity<ApiResponse<JobResponse>> create(
             @Valid @RequestBody JobRequest req,
-            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId) {
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
+        if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
+            throw new ForbiddenException("Only recruiters and admins can post jobs");
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(jobService.createJob(req, userId), "Job created"));
+            .body(ApiResponse.success(jobService.createJob(req, userId, role), "Job created"));
     }
 
     @GetMapping("/{jobId}")

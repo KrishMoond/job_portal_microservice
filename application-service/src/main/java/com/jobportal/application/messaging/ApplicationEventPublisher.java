@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApplicationEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationEventPublisher.class);
-    public static final String JOB_APPLIED_NOTIFICATION_QUEUE = "job.applied.notification.queue";
-    public static final String JOB_APPLIED_ANALYTICS_QUEUE    = "job.applied.analytics.queue";
+    public static final String JOB_APPLIED_ROUTING_KEY        = "job.applied";
+    public static final String INTERVIEW_SCHEDULED_ROUTING_KEY = "interview.scheduled";
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -28,9 +28,7 @@ public class ApplicationEventPublisher {
 
     @Transactional
     public void publishJobApplied(JobAppliedEvent event) {
-        String payload = toJson(event);
-        outboxEventRepository.save(new OutboxEvent("JOB_APPLIED", JOB_APPLIED_NOTIFICATION_QUEUE, payload));
-        outboxEventRepository.save(new OutboxEvent("JOB_APPLIED", JOB_APPLIED_ANALYTICS_QUEUE, payload));
+        outboxEventRepository.save(new OutboxEvent("JOB_APPLIED", JOB_APPLIED_ROUTING_KEY, toJson(event)));
         log.info("[OUTBOX] Saved JobAppliedEvent to outbox | applicationId={}", event.getApplicationId());
     }
 

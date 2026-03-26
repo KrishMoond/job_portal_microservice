@@ -38,6 +38,7 @@ public class ApplicationService {
         this.eventPublisher = eventPublisher;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @SuppressWarnings("unchecked")
     public JobApplication apply(ApplyRequest req) {
         // 1. Fetch job via Feign — fail fast if job not found

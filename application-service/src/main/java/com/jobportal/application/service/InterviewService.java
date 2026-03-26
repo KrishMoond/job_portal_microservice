@@ -21,7 +21,7 @@ import java.util.Locale;
 @Service
 public class InterviewService {
 
-    public static final String INTERVIEW_SCHEDULED_NOTIFICATION_QUEUE = "interview.scheduled.notification.queue";
+    public static final String INTERVIEW_SCHEDULED_ROUTING_KEY = "interview.scheduled";
 
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
@@ -61,7 +61,7 @@ public class InterviewService {
         event.setMeetingLink(saved.getMeetingLink());
 
         outboxEventRepository.save(new OutboxEvent(
-            "INTERVIEW_SCHEDULED", INTERVIEW_SCHEDULED_NOTIFICATION_QUEUE, toJson(event)));
+            "INTERVIEW_SCHEDULED", INTERVIEW_SCHEDULED_ROUTING_KEY, toJson(event)));
 
         return saved;
     }

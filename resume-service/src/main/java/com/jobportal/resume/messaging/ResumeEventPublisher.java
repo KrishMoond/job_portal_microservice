@@ -14,8 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ResumeEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ResumeEventPublisher.class);
-    public static final String RESUME_UPLOADED_NOTIFICATION_QUEUE = "resume.uploaded.notification.queue";
-    public static final String RESUME_UPLOADED_ANALYTICS_QUEUE    = "resume.uploaded.analytics.queue";
+    public static final String RESUME_UPLOADED_ROUTING_KEY = "resume.uploaded";
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -28,9 +27,7 @@ public class ResumeEventPublisher {
 
     @Transactional
     public void publishResumeUploaded(ResumeUploadedEvent event) {
-        String payload = toJson(event);
-        outboxEventRepository.save(new OutboxEvent("RESUME_UPLOADED", RESUME_UPLOADED_NOTIFICATION_QUEUE, payload));
-        outboxEventRepository.save(new OutboxEvent("RESUME_UPLOADED", RESUME_UPLOADED_ANALYTICS_QUEUE, payload));
+        outboxEventRepository.save(new OutboxEvent("RESUME_UPLOADED", RESUME_UPLOADED_ROUTING_KEY, toJson(event)));
         log.info("[OUTBOX] Saved ResumeUploadedEvent to outbox | resumeId={}", event.getResumeId());
     }
 

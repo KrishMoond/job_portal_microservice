@@ -16,11 +16,8 @@ public class JobEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(JobEventPublisher.class);
 
-    public static final String JOB_CREATED_SEARCH_QUEUE       = "job.created.search.queue";
-    public static final String JOB_CREATED_NOTIFICATION_QUEUE = "job.created.notification.queue";
-    public static final String JOB_CREATED_ANALYTICS_QUEUE    = "job.created.analytics.queue";
-    public static final String JOB_CLOSED_SEARCH_QUEUE        = "job.closed.search.queue";
-    public static final String JOB_CLOSED_NOTIFICATION_QUEUE  = "job.closed.notification.queue";
+    public static final String JOB_CREATED_ROUTING_KEY = "job.created";
+    public static final String JOB_CLOSED_ROUTING_KEY  = "job.closed";
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -33,18 +30,13 @@ public class JobEventPublisher {
 
     @Transactional
     public void publishJobCreated(JobCreatedEvent event) {
-        String payload = toJson(event);
-        outboxEventRepository.save(new OutboxEvent("JOB_CREATED", JOB_CREATED_SEARCH_QUEUE, payload));
-        outboxEventRepository.save(new OutboxEvent("JOB_CREATED", JOB_CREATED_NOTIFICATION_QUEUE, payload));
-        outboxEventRepository.save(new OutboxEvent("JOB_CREATED", JOB_CREATED_ANALYTICS_QUEUE, payload));
+        outboxEventRepository.save(new OutboxEvent("JOB_CREATED", JOB_CREATED_ROUTING_KEY, toJson(event)));
         log.info("[OUTBOX] Saved JobCreatedEvent to outbox | jobId={}", event.getJobId());
     }
 
     @Transactional
     public void publishJobClosed(JobClosedEvent event) {
-        String payload = toJson(event);
-        outboxEventRepository.save(new OutboxEvent("JOB_CLOSED", JOB_CLOSED_SEARCH_QUEUE, payload));
-        outboxEventRepository.save(new OutboxEvent("JOB_CLOSED", JOB_CLOSED_NOTIFICATION_QUEUE, payload));
+        outboxEventRepository.save(new OutboxEvent("JOB_CLOSED", JOB_CLOSED_ROUTING_KEY, toJson(event)));
         log.info("[OUTBOX] Saved JobClosedEvent to outbox | jobId={}", event.getJobId());
     }
 

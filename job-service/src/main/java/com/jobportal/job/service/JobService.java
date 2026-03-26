@@ -35,8 +35,9 @@ public class JobService {
         this.userServiceClient = userServiceClient;
     }
 
-    public JobResponse createJob(JobRequest req, String userId) {
-        validateRecruiterRole(userId);
+    @org.springframework.transaction.annotation.Transactional
+    public JobResponse createJob(JobRequest req, String userId, String roleFromToken) {
+        verifyRoleFromDb(userId, roleFromToken);
 
         Job job = new Job();
         job.setTitle(req.getTitle());
@@ -61,6 +62,7 @@ public class JobService {
         return jobRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public JobResponse closeJob(String jobId, String requesterId, String role) {
         Job job = jobRepository.findById(jobId)
             .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
@@ -76,20 +78,25 @@ public class JobService {
     }
 
     @SuppressWarnings("unchecked")
-    private void validateRecruiterRole(String userId) {
-        if (userId == null || userId.isBlank()) return;
+    private void verifyRoleFromDb(String userId, String roleFromToken) {
+        if (userId == null || userId.isBlank())
+            throw new ForbiddenException("Authentication required");
         try {
-            Map<String, Object> userResp = userServiceClient.getUserById(userId);
-            Map<String, Object> userData = (Map<String, Object>) userResp.get("data");
-            if (userData == null)
-                throw new ResourceNotFoundException("User not found: " + userId);
-            String role = (String) userData.get("role");
-            if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
+            Map<String, Object> resp = userServiceClient.getUserById(userId);
+            Map<String, Object> data = (Map<String, Object>) resp.get("data");
+            if (data == null)
+                throw new ForbiddenException("User not found: " + userId);
+            String dbRole = (String) data.get("role");
+            if (!dbRole.equals(roleFromToken))
+                throw new ForbiddenException("Role mismatch — token role does not match DB role");
+            if (!"RECRUITER".equals(dbRole) && !"ADMIN".equals(dbRole))
                 throw new ForbiddenException("Only recruiters and admins can post jobs");
-        } catch (ForbiddenException | ResourceNotFoundException e) {
+        } catch (ForbiddenException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("[Feign] user-service unavailable during role check for userId={}, proceeding", userId, e);
+            log.warn("[Feign] user-service unavailable for userId={}, falling back to token role", userId);
+            if (!"RECRUITER".equals(roleFromToken) && !"ADMIN".equals(roleFromToken))
+                throw new ForbiddenException("Only recruiters and admins can post jobs");
         }
     }
 
@@ -108,21 +115,13 @@ public class JobService {
     }
 
     private void publishJobCreated(Job job, String userId) {
-        try {
-            eventPublisher.publishJobCreated(new JobCreatedEvent(
-                job.getId(), job.getTitle(), job.getCompany(), job.getLocation(),
-                job.getSalary(), job.getDescription(), userId));
-        } catch (Exception e) {
-            log.error("[JMS] Failed to publish JobCreatedEvent for jobId={}", job.getId(), e);
-        }
+        eventPublisher.publishJobCreated(new JobCreatedEvent(
+            job.getId(), job.getTitle(), job.getCompany(), job.getLocation(),
+            job.getSalary(), job.getDescription(), userId));
     }
 
     private void publishJobClosed(Job job) {
-        try {
-            eventPublisher.publishJobClosed(new JobClosedEvent(job.getId(), job.getTitle(), job.getRecruiterId()));
-        } catch (Exception e) {
-            log.error("[JMS] Failed to publish JobClosedEvent for jobId={}", job.getId(), e);
-        }
+        eventPublisher.publishJobClosed(new JobClosedEvent(job.getId(), job.getTitle(), job.getRecruiterId()));
     }
 
     private JobResponse toResponse(Job j) {

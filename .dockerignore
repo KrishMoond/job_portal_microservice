@@ -1,0 +1,11 @@
+**/.metadata
+**/.settings
+**/.classpath
+**/.project
+**/target
+**/*.log
+**/.git
+**/.gitignore
+**/changes*.patch
+**/changes*.txt
+*.docx

@@ -27,6 +27,7 @@ public class ResumeService {
         this.eventPublisher = eventPublisher;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public ResumeResponse upload(ResumeRequest req) {
         String storedUrl = storageService.store(req.getFileUrl(), req.getFileName());
         Resume resume = new Resume();
