@@ -104,6 +104,8 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
       JWT_SECRET: "j0bP0rt@lS3cur3S3cr3tK3y!XyZ#2024$$AbCdEfGhIjKlMnOpQrStUvWxYz12"
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
 
   job-service:
     build:
@@ -124,6 +126,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
 
   application-service:
     build:
@@ -144,6 +148,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
 
   resume-service:
     build:
@@ -164,6 +170,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
+      DB_USERNAME: postgres
+      DB_PASSWORD: root
 
   search-service:
     build:

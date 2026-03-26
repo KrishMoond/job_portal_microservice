@@ -3,6 +3,7 @@ package com.jobportal.user.company;
 import com.jobportal.common.exception.BadRequestException;
 import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.common.exception.ResourceNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class CompanyController {
 
     @PostMapping
     public ResponseEntity<Company> createCompany(
-            @RequestBody Company req,
+            @Valid @RequestBody Company req,
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId) {
         if (companyRepository.existsByName(req.getName()))
             throw new BadRequestException("Company with this name already exists");
@@ -37,7 +38,7 @@ public class CompanyController {
     @PutMapping("/{id}")
     public ResponseEntity<Company> updateCompany(
             @PathVariable String id,
-            @RequestBody Company req,
+            @Valid @RequestBody Company req,
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
             @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
         Company company = companyRepository.findById(id)

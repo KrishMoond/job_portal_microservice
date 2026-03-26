@@ -1,6 +1,7 @@
 package com.jobportal.user.company;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ public class Company {
     @Id private String id;
     @Column(nullable = false, unique = true) private String name;
     @Column(columnDefinition = "TEXT") private String description;
+    @Pattern(regexp = "^(https?://).{3,200}$", message = "Website must be a valid URL starting with http:// or https://")
     private String website;
     private String logoUrl;
     @Column(nullable = false) private String createdByUserId;

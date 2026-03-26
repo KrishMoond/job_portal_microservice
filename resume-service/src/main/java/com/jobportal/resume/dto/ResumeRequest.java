@@ -1,11 +1,14 @@
 package com.jobportal.resume.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 public class ResumeRequest {
 
     @NotBlank private String userId;
-    @NotBlank private String fileUrl;
+    @NotBlank
+    @Pattern(regexp = "^(https?://).{3,500}$", message = "File URL must be a valid URL starting with http:// or https://")
+    private String fileUrl;
     private String fileName;
 
     public ResumeRequest() {}

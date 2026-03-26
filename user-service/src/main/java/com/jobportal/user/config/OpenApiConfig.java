@@ -16,7 +16,7 @@ public class OpenApiConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
             .info(new Info().title("User Service API").version("1.0.0"))
-            .addServersItem(new Server().url("http://localhost:8081").description("Local"))
+            .addServersItem(new Server().url("http://localhost:8080").description("Gateway"))
             .addSecurityItem(new SecurityRequirement().addList("Bearer"))
             .components(new Components().addSecuritySchemes("Bearer",
                 new SecurityScheme()
