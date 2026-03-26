@@ -108,7 +108,8 @@ jobs:
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v5
         with:
-          context: ./${{ matrix.service.name }}
+          context: .
+          file: ./${{ matrix.service.name }}/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/jobportal-${{ matrix.service.name }}:latest
