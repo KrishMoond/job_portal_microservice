@@ -4,7 +4,7 @@ target/
 *.jar
 *.war
 
-# IDE - Eclipse
+# IDE - Eclipse / STS
 .metadata/
 .classpath
 .project
@@ -24,7 +24,16 @@ Thumbs.db
 
 # Logs
 *.log
-build.log
+*.logs
+logs/
+
+# Patch files
+*.patch
+
+# Text/Word docs at root
+*.txt
+*.docx
+*.doc
 
 # Spring Boot
 spring-shell.log
