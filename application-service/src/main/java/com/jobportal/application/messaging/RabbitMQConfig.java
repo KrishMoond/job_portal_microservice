@@ -39,10 +39,12 @@ public class RabbitMQConfig {
     @Bean public Queue jobAppliedNotificationQueue()  { return QueueBuilder.durable("job.applied.notification.queue").build(); }
     @Bean public Queue jobAppliedAnalyticsQueue()     { return QueueBuilder.durable("job.applied.analytics.queue").build(); }
     @Bean public Queue interviewScheduledNotifQueue() { return QueueBuilder.durable("interview.scheduled.notification.queue").build(); }
+    @Bean public Queue appStatusChangedNotifQueue()   { return QueueBuilder.durable("application.status.changed.notification.queue").build(); }
 
     @Bean public Binding bindJobAppliedNotification(TopicExchange jobPortalExchange) { return BindingBuilder.bind(jobAppliedNotificationQueue()).to(jobPortalExchange).with("job.applied"); }
     @Bean public Binding bindJobAppliedAnalytics(TopicExchange jobPortalExchange)    { return BindingBuilder.bind(jobAppliedAnalyticsQueue()).to(jobPortalExchange).with("job.applied"); }
     @Bean public Binding bindInterviewScheduled(TopicExchange jobPortalExchange)     { return BindingBuilder.bind(interviewScheduledNotifQueue()).to(jobPortalExchange).with("interview.scheduled"); }
+    @Bean public Binding bindAppStatusChanged(TopicExchange jobPortalExchange)       { return BindingBuilder.bind(appStatusChangedNotifQueue()).to(jobPortalExchange).with("application.status.changed"); }
 
     @Bean
     public ApplicationRunner declareQueues(RabbitAdmin rabbitAdmin) {

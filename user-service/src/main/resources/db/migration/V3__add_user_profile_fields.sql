@@ -1,0 +1,5 @@
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+ALTER TABLE users ADD COLUMN location VARCHAR(100);
+ALTER TABLE users ADD COLUMN experience_level VARCHAR(20);
+ALTER TABLE users ADD COLUMN education TEXT;
+ALTER TABLE users ADD COLUMN preferred_job_types VARCHAR(255);

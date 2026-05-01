@@ -3,6 +3,9 @@
 **/.classpath
 **/.project
 **/target
+**/node_modules
+**/.angular
+**/dist
 **/*.log
 **/.git
 **/.gitignore

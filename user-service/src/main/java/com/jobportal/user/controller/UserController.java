@@ -5,6 +5,7 @@ import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.user.dto.LoginRequest;
 import com.jobportal.user.dto.RegisterRequest;
 import com.jobportal.user.dto.UserResponse;
+import com.jobportal.user.dto.UserUpdateRequest;
 import com.jobportal.user.service.AuthService;
 import com.jobportal.user.service.UserService;
 import jakarta.validation.Valid;
@@ -59,5 +60,19 @@ public class UserController {
         }
         
         return ResponseEntity.ok(ApiResponse.success(userService.update(userId, req), "User updated"));
+    }
+
+    @PutMapping("/{userId}/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
+            @PathVariable String userId,
+            @Valid @RequestBody UserUpdateRequest req,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String requestUserId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "JOB_SEEKER") String role) {
+
+        if (!"ADMIN".equals(role) && !userId.equals(requestUserId)) {
+            throw new ForbiddenException("You can only update your own profile");
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(userService.updateProfile(userId, req), "Profile updated"));
     }
 }

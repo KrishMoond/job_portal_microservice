@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface JobSearchRepository extends JpaRepository<JobSearchRecord, String> {
@@ -25,4 +26,14 @@ public interface JobSearchRepository extends JpaRepository<JobSearchRecord, Stri
            "AND (LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(j.company) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND LOWER(j.location) LIKE LOWER(CONCAT('%', :location, '%'))")
     List<JobSearchRecord> findByKeywordAndLocation(@Param("keyword") String keyword, @Param("location") String location);
+
+    // Category-based queries
+    List<JobSearchRecord> findByStatusAndCategory(String status, String category);
+
+    @Query("SELECT j.category AS category, COUNT(j) AS count " +
+           "FROM JobSearchRecord j " +
+           "WHERE j.status = 'OPEN' AND j.category IS NOT NULL AND j.category <> '' " +
+           "GROUP BY j.category " +
+           "ORDER BY COUNT(j) DESC")
+    List<Map<String, Object>> countByCategory();
 }

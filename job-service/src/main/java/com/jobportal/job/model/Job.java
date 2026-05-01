@@ -15,6 +15,7 @@ public class Job {
     @Column(nullable = false) private String location;
     private String salary;
     @Column(columnDefinition = "TEXT") private String description;
+    @Column(length = 50) private String category;
     @Column(nullable = false) private String recruiterId;
 
     @Enumerated(EnumType.STRING)
@@ -53,6 +54,8 @@ public class Job {
     public void setSalary(String salary) { this.salary = salary; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
     public String getRecruiterId() { return recruiterId; }
     public void setRecruiterId(String recruiterId) { this.recruiterId = recruiterId; }
     public Status getStatus() { return status; }

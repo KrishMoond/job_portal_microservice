@@ -1,0 +1,146 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-12">
+  <div class="w-full max-w-md">
+    <!-- Logo/Brand -->
+    <div class="text-center mb-8 animate-fade-in">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg mb-4">
+        <lucide-icon name="briefcase" class="w-8 h-8 text-white"></lucide-icon>
+      </div>
+      <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Create Account</h1>
+      <p class="text-gray-600 mt-2">Create your HireHub profile</p>
+    </div>
+
+    <!-- Registration Card -->
+    <div class="card animate-slide-up">
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        
+        <!-- Full Name -->
+        <div class="mb-5">
+          <label class="form-label" for="name">
+            <lucide-icon name="user" [size]="16" class="inline mr-1"></lucide-icon>
+            Full Name
+          </label>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            class="form-input"
+            [class.error]="registerForm.get('name')?.touched && registerForm.get('name')?.invalid"
+            placeholder="John Doe"
+          />
+          @if (getFieldError('name')) {
+            <div class="form-error">
+              <lucide-icon name="alert-circle" [size]="14"></lucide-icon>
+              {{ getFieldError('name') }}
+            </div>
+          }
+        </div>
+
+        <!-- Email -->
+        <div class="mb-5">
+          <label class="form-label" for="email">
+            <lucide-icon name="mail" [size]="16" class="inline mr-1"></lucide-icon>
+            Email Address
+          </label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            class="form-input"
+            [class.error]="registerForm.get('email')?.touched && registerForm.get('email')?.invalid"
+            placeholder="john@example.com"
+          />
+          @if (getFieldError('email')) {
+            <div class="form-error">
+              <lucide-icon name="alert-circle" [size]="14"></lucide-icon>
+              {{ getFieldError('email') }}
+            </div>
+          }
+        </div>
+
+        <!-- Password -->
+        <div class="mb-5">
+          <label class="form-label" for="password">
+            <lucide-icon name="lock" [size]="16" class="inline mr-1"></lucide-icon>
+            Password
+          </label>
+          <div class="relative">
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="password"
+              class="form-input pr-12"
+              [class.error]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              (click)="togglePasswordVisibility()"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <lucide-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="18"></lucide-icon>
+            </button>
+          </div>
+          @if (getFieldError('password')) {
+            <div class="form-error">
+              <lucide-icon name="alert-circle" [size]="14"></lucide-icon>
+              {{ getFieldError('password') }}
+            </div>
+          }
+        </div>
+
+        <!-- Role Selection -->
+        <div class="mb-6">
+          <label class="form-label mb-3">I am a...</label>
+          <div class="grid grid-cols-2 gap-3">
+            @for (role of roles; track role.value) {
+              <label class="relative cursor-pointer">
+                <input
+                  type="radio"
+                  formControlName="role"
+                  [value]="role.value"
+                  class="sr-only peer"
+                />
+                <div class="card p-4 text-center transition-all peer-checked:border-indigo-600 peer-checked:bg-indigo-50 peer-checked:shadow-md hover:border-indigo-300">
+                  <lucide-icon [name]="role.icon" [size]="32" class="mx-auto mb-2 text-indigo-600"></lucide-icon>
+                  <div class="font-semibold text-gray-900">{{ role.label }}</div>
+                </div>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Error Alert -->
+        @if (errorMessage()) {
+          <div class="alert alert-error mb-5">
+            <lucide-icon name="alert-circle" [size]="18"></lucide-icon>
+            <span>{{ errorMessage() }}</span>
+          </div>
+        }
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          class="btn btn-primary w-full btn-lg"
+          [disabled]="isLoading() || registerForm.invalid"
+        >
+          @if (isLoading()) {
+            <lucide-icon name="loader-2" [size]="20" class="animate-spin"></lucide-icon>
+            <span>Creating Account...</span>
+          } @else {
+            <span>Create Account</span>
+            <lucide-icon name="arrow-right" [size]="18"></lucide-icon>
+          }
+        </button>
+
+        <!-- Login Link -->
+        <p class="text-center text-sm text-gray-600 mt-6">
+          Already have an account?
+          <a routerLink="/login" class="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors ml-1">
+            Sign in
+          </a>
+        </p>
+      </form>
+    </div>
+
+  </div>
+</div>

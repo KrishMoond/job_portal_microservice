@@ -4,6 +4,7 @@ import com.jobportal.common.exception.BadRequestException;
 import com.jobportal.common.exception.ResourceNotFoundException;
 import com.jobportal.user.dto.RegisterRequest;
 import com.jobportal.user.dto.UserResponse;
+import com.jobportal.user.dto.UserUpdateRequest;
 import com.jobportal.user.model.User;
 import com.jobportal.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -50,7 +51,21 @@ public class UserService {
         return toResponse(userRepository.save(user));
     }
 
+    public UserResponse updateProfile(String userId, UserUpdateRequest req) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        if (req.getName() != null) user.setName(req.getName());
+        if (req.getPhone() != null) user.setPhone(req.getPhone());
+        if (req.getLocation() != null) user.setLocation(req.getLocation());
+        if (req.getExperienceLevel() != null) user.setExperienceLevel(req.getExperienceLevel());
+        if (req.getEducation() != null) user.setEducation(req.getEducation());
+        if (req.getPreferredJobTypes() != null) user.setPreferredJobTypes(req.getPreferredJobTypes());
+        return toResponse(userRepository.save(user));
+    }
+
     private UserResponse toResponse(User u) {
-        return new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole());
+        return new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole(),
+                               u.getPhone(), u.getLocation(), u.getExperienceLevel(),
+                               u.getEducation(), u.getPreferredJobTypes());
     }
 }

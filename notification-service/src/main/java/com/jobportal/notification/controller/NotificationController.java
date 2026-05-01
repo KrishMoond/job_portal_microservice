@@ -1,5 +1,6 @@
 package com.jobportal.notification.controller;
 
+import com.jobportal.common.dto.ApiResponse;
 import com.jobportal.notification.model.InAppNotification;
 import com.jobportal.notification.repository.InAppNotificationRepository;
 import org.springframework.http.ResponseEntity;
@@ -18,15 +19,21 @@ public class NotificationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<InAppNotification>> getMyNotifications(
+    public ResponseEntity<ApiResponse<List<InAppNotification>>> getMyNotifications(
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId) {
-        return ResponseEntity.ok(repository.findByUserIdOrderByCreatedAtDesc(userId));
+        return ResponseEntity.ok(ApiResponse.success(
+                repository.findByUserIdOrderByCreatedAtDesc(userId),
+                "Notifications fetched"
+        ));
     }
 
     @GetMapping("/unread")
-    public ResponseEntity<List<InAppNotification>> getUnreadNotifications(
+    public ResponseEntity<ApiResponse<List<InAppNotification>>> getUnreadNotifications(
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId) {
-        return ResponseEntity.ok(repository.findByUserIdAndIsReadFalse(userId));
+        return ResponseEntity.ok(ApiResponse.success(
+                repository.findByUserIdAndIsReadFalse(userId),
+                "Unread notifications fetched"
+        ));
     }
 
     @PutMapping("/{id}/read")

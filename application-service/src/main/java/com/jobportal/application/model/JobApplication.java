@@ -11,6 +11,7 @@ public class JobApplication {
     @Id private String id;
     @Column(nullable = false) private String jobId;
     private String jobTitle;
+    private String recruiterId;
     @Column(nullable = false) private String candidateId;
     private String candidateEmail;
     private String resumeId;
@@ -22,7 +23,7 @@ public class JobApplication {
     private LocalDateTime appliedAt;
     private LocalDateTime updatedAt;
 
-    public enum Status { APPLIED, SHORTLISTED, REJECTED, INTERVIEW_SCHEDULED, HIRED }
+    public enum Status { APPLIED, SHORTLISTED, REJECTED, INTERVIEW_SCHEDULED, HIRED, OFFER_ACCEPTED, OFFER_REJECTED }
 
     public JobApplication() {}
 
@@ -43,6 +44,8 @@ public class JobApplication {
     public void setJobId(String jobId) { this.jobId = jobId; }
     public String getJobTitle() { return jobTitle; }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
+    public String getRecruiterId() { return recruiterId; }
+    public void setRecruiterId(String recruiterId) { this.recruiterId = recruiterId; }
     public String getCandidateId() { return candidateId; }
     public void setCandidateId(String candidateId) { this.candidateId = candidateId; }
     public String getCandidateEmail() { return candidateEmail; }

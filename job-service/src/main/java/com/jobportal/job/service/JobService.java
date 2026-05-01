@@ -46,6 +46,7 @@ public class JobService {
         job.setLocation(req.getLocation());
         job.setSalary(req.getSalary());
         job.setDescription(req.getDescription());
+        job.setCategory(resolveCategory(req.getCategory(), req.getTitle(), req.getDescription()));
         job.setRecruiterId(userId);
         job = jobRepository.save(job);
 
@@ -66,14 +67,32 @@ public class JobService {
     public JobResponse closeJob(String jobId, String requesterId, String role) {
         Job job = jobRepository.findById(jobId)
             .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
-        boolean isBlankRequester = requesterId == null || requesterId.isBlank();
-        if (!isBlankRequester && !"ADMIN".equals(role) && !requesterId.equals(job.getRecruiterId()))
+        if (!"ADMIN".equals(role) && (requesterId == null || requesterId.isBlank()))
+            throw new ForbiddenException("Authentication required to close job");
+        if (!"ADMIN".equals(role) && !requesterId.equals(job.getRecruiterId()))
             throw new ForbiddenException("You can only close your own jobs");
         if (job.getStatus() == Job.Status.CLOSED)
             throw new BadRequestException("Job is already closed");
         job.setStatus(Job.Status.CLOSED);
         job = jobRepository.save(job);
         publishJobClosed(job);
+        return toResponse(job);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public JobResponse reopenJob(String jobId, String requesterId, String role) {
+        Job job = jobRepository.findById(jobId)
+            .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+        if (!"ADMIN".equals(role) && (requesterId == null || requesterId.isBlank()))
+            throw new ForbiddenException("Authentication required to reopen job");
+        if (!"ADMIN".equals(role) && !requesterId.equals(job.getRecruiterId()))
+            throw new ForbiddenException("You can only reopen your own jobs");
+        if (job.getStatus() == Job.Status.OPEN)
+            throw new BadRequestException("Job is already open");
+        job.setStatus(Job.Status.OPEN);
+        job = jobRepository.save(job);
+        // Re-publish as a new job created event so search index is updated
+        publishJobCreated(job, requesterId);
         return toResponse(job);
     }
 
@@ -100,6 +119,7 @@ public class JobService {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private String resolveCompanyName(String companyId) {
         try {
             Map<String, Object> companyResp = userServiceClient.getCompanyById(companyId);
@@ -117,7 +137,7 @@ public class JobService {
     private void publishJobCreated(Job job, String userId) {
         eventPublisher.publishJobCreated(new JobCreatedEvent(
             job.getId(), job.getTitle(), job.getCompany(), job.getLocation(),
-            job.getSalary(), job.getDescription(), userId));
+            job.getSalary(), job.getDescription(), userId, job.getCategory()));
     }
 
     private void publishJobClosed(Job job) {
@@ -133,9 +153,35 @@ public class JobService {
         r.setLocation(j.getLocation());
         r.setSalary(j.getSalary());
         r.setDescription(j.getDescription());
+        r.setCategory(resolveCategory(j.getCategory(), j.getTitle(), j.getDescription()));
         r.setRecruiterId(j.getRecruiterId());
         r.setStatus(j.getStatus());
         r.setCreatedAt(j.getCreatedAt());
         return r;
+    }
+
+    private String resolveCategory(String requestedCategory, String title, String description) {
+        if (requestedCategory != null && !requestedCategory.isBlank()) {
+            return requestedCategory.trim();
+        }
+        String content = ((title == null ? "" : title) + " " + (description == null ? "" : description)).toLowerCase();
+        if (containsAny(content, "intern", "internship", "trainee", "graduate")) return "Intern";
+        if (containsAny(content, "design", "ui", "ux", "graphic", "figma", "visual")) return "Design";
+        if (containsAny(content, "marketing", "seo", "brand", "campaign", "social media")) return "Marketing";
+        if (containsAny(content, "finance", "accounting", "banking", "auditor", "tax")) return "Finance";
+        if (containsAny(content, "health", "medical", "nurse", "doctor", "clinical")) return "Healthcare";
+        if (containsAny(content, "support", "helpdesk", "customer success", "service desk")) return "Support";
+        if (containsAny(content, "content", "writer", "copywriter", "editor")) return "Content";
+        if (containsAny(content, "business", "operations", "analyst", "manager", "strategy", "recruiter")) return "Business";
+        return "Engineering";
+    }
+
+    private boolean containsAny(String value, String... tokens) {
+        for (String token : tokens) {
+            if (value.contains(token)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

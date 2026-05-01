@@ -30,10 +30,16 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         "/api/users/register",
         "/api/users/login",
         "/api/search/jobs",
+        "/api/search/categories",
         "/actuator",
         "/swagger-ui",
         "/v3/api-docs",
         "/webjars"
+    );
+
+    private static final List<String> PUBLIC_READ_PATHS = List.of(
+        "/api/jobs",
+        "/api/companies"
     );
 
     // Map.of() supports max 10 entries — use Map.ofEntries() for 11+
@@ -93,6 +99,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         HttpMethod method = exchange.getRequest().getMethod();
 
         if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+            return chain.filter(exchange);
+        }
+
+        if (method == HttpMethod.GET && PUBLIC_READ_PATHS.stream().anyMatch(path::startsWith)) {
             return chain.filter(exchange);
         }
 

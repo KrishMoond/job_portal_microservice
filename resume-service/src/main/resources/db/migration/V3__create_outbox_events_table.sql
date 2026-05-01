@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS outbox_events (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_outbox_processed ON outbox_events (processed, created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_processed ON outbox_events (processed, created_at);

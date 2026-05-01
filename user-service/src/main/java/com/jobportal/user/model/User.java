@@ -24,17 +24,34 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    private String phone;
+    private String location;
+
+    @Enumerated(EnumType.STRING)
+    private ExperienceLevel experienceLevel;
+
+    @Column(columnDefinition = "TEXT")
+    private String education;
+
+    private String preferredJobTypes; // comma-separated
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public enum Role { JOB_SEEKER, RECRUITER, ADMIN }
+    public enum ExperienceLevel { ENTRY, JUNIOR, MID, SENIOR, EXECUTIVE }
 
     public User() {}
 
     public User(String id, String name, String email, String password, Role role,
+                String phone, String location, ExperienceLevel experienceLevel,
+                String education, String preferredJobTypes,
                 LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id; this.name = name; this.email = email;
         this.password = password; this.role = role;
+        this.phone = phone; this.location = location;
+        this.experienceLevel = experienceLevel;
+        this.education = education; this.preferredJobTypes = preferredJobTypes;
         this.createdAt = createdAt; this.updatedAt = updatedAt;
     }
 
@@ -58,6 +75,16 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public ExperienceLevel getExperienceLevel() { return experienceLevel; }
+    public void setExperienceLevel(ExperienceLevel experienceLevel) { this.experienceLevel = experienceLevel; }
+    public String getEducation() { return education; }
+    public void setEducation(String education) { this.education = education; }
+    public String getPreferredJobTypes() { return preferredJobTypes; }
+    public void setPreferredJobTypes(String preferredJobTypes) { this.preferredJobTypes = preferredJobTypes; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

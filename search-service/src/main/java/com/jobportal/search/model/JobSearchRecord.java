@@ -17,6 +17,7 @@ public class JobSearchRecord {
     @Column(columnDefinition = "TEXT") private String description;
     private String recruiterId;
     private String status;
+    @Column(length = 50) private String category;
     private LocalDateTime createdAt;
 
     public JobSearchRecord() {}
@@ -46,6 +47,8 @@ public class JobSearchRecord {
     public void setRecruiterId(String recruiterId) { this.recruiterId = recruiterId; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

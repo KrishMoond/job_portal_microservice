@@ -36,17 +36,19 @@ public class RabbitMQConfig {
         return new RabbitTemplate(connectionFactory);
     }
 
-    @Bean public Queue jobCreatedNotificationQueue()     { return QueueBuilder.durable("job.created.notification.queue").build(); }
-    @Bean public Queue jobAppliedNotificationQueue()     { return QueueBuilder.durable("job.applied.notification.queue").build(); }
-    @Bean public Queue jobClosedNotificationQueue()      { return QueueBuilder.durable("job.closed.notification.queue").build(); }
-    @Bean public Queue resumeUploadedNotificationQueue() { return QueueBuilder.durable("resume.uploaded.notification.queue").build(); }
-    @Bean public Queue interviewScheduledNotifQueue()    { return QueueBuilder.durable("interview.scheduled.notification.queue").build(); }
+    @Bean public Queue jobCreatedNotificationQueue()       { return QueueBuilder.durable("job.created.notification.queue").build(); }
+    @Bean public Queue jobAppliedNotificationQueue()       { return QueueBuilder.durable("job.applied.notification.queue").build(); }
+    @Bean public Queue jobClosedNotificationQueue()        { return QueueBuilder.durable("job.closed.notification.queue").build(); }
+    @Bean public Queue resumeUploadedNotificationQueue()   { return QueueBuilder.durable("resume.uploaded.notification.queue").build(); }
+    @Bean public Queue interviewScheduledNotifQueue()      { return QueueBuilder.durable("interview.scheduled.notification.queue").build(); }
+    @Bean public Queue appStatusChangedNotifQueue()        { return QueueBuilder.durable("application.status.changed.notification.queue").build(); }
 
     @Bean public Binding bindJobCreatedNotification(TopicExchange jobPortalExchange)     { return BindingBuilder.bind(jobCreatedNotificationQueue()).to(jobPortalExchange).with("job.created"); }
     @Bean public Binding bindJobAppliedNotification(TopicExchange jobPortalExchange)     { return BindingBuilder.bind(jobAppliedNotificationQueue()).to(jobPortalExchange).with("job.applied"); }
     @Bean public Binding bindJobClosedNotification(TopicExchange jobPortalExchange)      { return BindingBuilder.bind(jobClosedNotificationQueue()).to(jobPortalExchange).with("job.closed"); }
     @Bean public Binding bindResumeUploadedNotification(TopicExchange jobPortalExchange) { return BindingBuilder.bind(resumeUploadedNotificationQueue()).to(jobPortalExchange).with("resume.uploaded"); }
     @Bean public Binding bindInterviewScheduled(TopicExchange jobPortalExchange)         { return BindingBuilder.bind(interviewScheduledNotifQueue()).to(jobPortalExchange).with("interview.scheduled"); }
+    @Bean public Binding bindAppStatusChanged(TopicExchange jobPortalExchange)           { return BindingBuilder.bind(appStatusChangedNotifQueue()).to(jobPortalExchange).with("application.status.changed"); }
 
     @Bean
     public ApplicationRunner declareQueues(RabbitAdmin rabbitAdmin) {

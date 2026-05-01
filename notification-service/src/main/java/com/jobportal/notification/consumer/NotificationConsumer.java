@@ -1,6 +1,7 @@
 package com.jobportal.notification.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jobportal.common.events.ApplicationStatusChangedEvent;
 import com.jobportal.common.events.InterviewScheduledEvent;
 import com.jobportal.common.events.JobAppliedEvent;
 import com.jobportal.common.events.JobClosedEvent;
@@ -65,8 +66,83 @@ public class NotificationConsumer {
                 emailService.sendEmail(event.getCandidateEmail(), subject, body);
             saveInAppNotification(event.getCandidateId(), body);
             saveLog("JOB_APPLIED", event.getCandidateEmail(), subject, body);
+
+            // Recruiter notification (in-app): someone applied to their job.
+            if (event.getRecruiterId() != null && !event.getRecruiterId().isBlank()) {
+                String recruiterMsg = "New application received for '" + event.getJobTitle() + "'.";
+                if (event.getCandidateEmail() != null) {
+                    recruiterMsg += " Candidate: " + event.getCandidateEmail();
+                }
+                saveInAppNotification(event.getRecruiterId(), recruiterMsg);
+            }
         } catch (Exception e) {
             log.error("[AMQP-CONSUMER] Failed to process JobAppliedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = "application.status.changed.notification.queue")
+    public void onStatusChanged(String payload) {
+        try {
+            ApplicationStatusChangedEvent event = objectMapper.readValue(payload, ApplicationStatusChangedEvent.class);
+            log.info("[AMQP-CONSUMER] Received ApplicationStatusChangedEvent | applicationId={} | status={}", event.getApplicationId(), event.getNewStatus());
+
+            String jobTitle = event.getJobTitle() != null ? event.getJobTitle() : "your applied job";
+            String message;
+            String subject;
+
+            switch (event.getNewStatus()) {
+                case "SHORTLISTED" -> {
+                    subject = "You've been shortlisted for: " + jobTitle;
+                    message = "Great news! You have been shortlisted for the role of '" + jobTitle + "'. The recruiter will be in touch soon.";
+                }
+                case "INTERVIEW_SCHEDULED" -> {
+                    subject = "Interview scheduled for: " + jobTitle;
+                    message = "An interview has been scheduled for your application to '" + jobTitle + "'. Check your interviews section for details.";
+                }
+                case "HIRED" -> {
+                    subject = "Congratulations! Offer received for: " + jobTitle;
+                    message = "Congratulations! You have received a job offer for '" + jobTitle + "'. Please respond to the offer in your applications dashboard.";
+                }
+                case "REJECTED" -> {
+                    subject = "Application update for: " + jobTitle;
+                    message = "Thank you for your interest in '" + jobTitle + "'. After careful consideration, the recruiter has decided to move forward with other candidates.";
+                }
+                case "OFFER_ACCEPTED" -> {
+                    subject = "Offer accepted — " + jobTitle;
+                    message = "You have successfully accepted the offer for '" + jobTitle + "'. Welcome aboard!";
+                }
+                case "OFFER_REJECTED" -> {
+                    subject = "Offer declined — " + jobTitle;
+                    message = "You have declined the offer for '" + jobTitle + "'. Your application has been updated accordingly.";
+                }
+                default -> {
+                    subject = "Application update for: " + jobTitle;
+                    message = "Your application status for '" + jobTitle + "' has been updated to: " + event.getNewStatus().replace("_", " ");
+                }
+            }
+
+            // In-app notification for candidate
+            if (event.getCandidateId() != null)
+                saveInAppNotification(event.getCandidateId(), message);
+
+            // Email notification for candidate
+            if (event.getCandidateEmail() != null)
+                emailService.sendEmail(event.getCandidateEmail(), subject, message);
+
+            saveLog("APPLICATION_STATUS_CHANGED", event.getCandidateEmail(), subject, message);
+
+            if (event.getRecruiterId() != null && !event.getRecruiterId().isBlank()
+                    && ("OFFER_ACCEPTED".equals(event.getNewStatus()) || "OFFER_REJECTED".equals(event.getNewStatus()))) {
+                String recruiterMessage = "Candidate "
+                        + (event.getCandidateEmail() != null ? event.getCandidateEmail() : event.getCandidateId())
+                        + ("OFFER_ACCEPTED".equals(event.getNewStatus())
+                            ? " accepted the offer for '"
+                            : " declined the offer for '")
+                        + jobTitle + "'.";
+                saveInAppNotification(event.getRecruiterId(), recruiterMessage);
+            }
+        } catch (Exception e) {
+            log.error("[AMQP-CONSUMER] Failed to process ApplicationStatusChangedEvent: {}", e.getMessage(), e);
         }
     }
 
@@ -78,6 +154,9 @@ public class NotificationConsumer {
             String body = "Your interview has been scheduled for " + event.getScheduledAt()
                 + (event.getMeetingLink() != null ? ". Meeting link: " + event.getMeetingLink() : "");
             saveInAppNotification(event.getCandidateId(), body);
+            if (event.getRecruiterId() != null && !event.getRecruiterId().isBlank()) {
+                saveInAppNotification(event.getRecruiterId(), "Interview scheduled successfully for candidate " + event.getCandidateId() + ".");
+            }
             saveLog("INTERVIEW_SCHEDULED", event.getCandidateId(), "Interview Scheduled", body);
         } catch (Exception e) {
             log.error("[AMQP-CONSUMER] Failed to process InterviewScheduledEvent: {}", e.getMessage(), e);
@@ -91,6 +170,9 @@ public class NotificationConsumer {
             log.info("[AMQP-CONSUMER] Received JobClosedEvent | jobId={}", event.getJobId());
             String subject = "Job Closed: " + event.getTitle();
             String body = "The job posting for " + event.getTitle() + " has been closed.";
+            if (event.getRecruiterId() != null && !event.getRecruiterId().isBlank()) {
+                saveInAppNotification(event.getRecruiterId(), "Your job '" + event.getTitle() + "' has been closed.");
+            }
             saveLog("JOB_CLOSED", "applicants@jobportal.com", subject, body);
         } catch (Exception e) {
             log.error("[AMQP-CONSUMER] Failed to process JobClosedEvent: {}", e.getMessage(), e);

@@ -6,7 +6,7 @@ public class ApplyRequest {
 
     @NotBlank private String jobId;
     @NotBlank private String candidateId;
-    private String resumeId;
+    @NotBlank private String resumeId;
 
     public ApplyRequest() {}
 

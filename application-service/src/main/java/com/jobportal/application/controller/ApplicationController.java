@@ -27,7 +27,7 @@ public class ApplicationController {
     public ResponseEntity<ApiResponse<JobApplication>> apply(
             @Valid @RequestBody ApplyRequest req,
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
-            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "JOB_SEEKER") String role) {
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
         if (!"JOB_SEEKER".equals(role)) throw new ForbiddenException("Only job seekers can apply for jobs");
         // If X-User-Id is present (via gateway), override candidateId from header
         if (!userId.isBlank()) req.setCandidateId(userId);
@@ -62,5 +62,18 @@ public class ApplicationController {
         if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
             throw new ForbiddenException("Only recruiters and admins can update application status");
         return ResponseEntity.ok(ApiResponse.success(applicationService.updateStatus(applicationId, req, userId, role), "Status updated"));
+    }
+
+    @PostMapping("/{applicationId}/offer-response")
+    public ResponseEntity<ApiResponse<JobApplication>> respondToOffer(
+            @PathVariable String applicationId,
+            @RequestParam("accepted") boolean accepted,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
+        if (!"JOB_SEEKER".equals(role) && !"ADMIN".equals(role))
+            throw new ForbiddenException("Only job seekers can respond to offers");
+        return ResponseEntity.ok(ApiResponse.success(
+                applicationService.respondToOffer(applicationId, accepted, userId, role),
+                accepted ? "Offer accepted" : "Offer rejected"));
     }
 }

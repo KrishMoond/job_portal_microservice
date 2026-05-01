@@ -10,11 +10,12 @@ public class JobCreatedEvent implements Serializable {
     private String salary;
     private String description;
     private String recruiterId;
+    private String category;
 
     public JobCreatedEvent() {}
 
     public JobCreatedEvent(String jobId, String title, String company, String location,
-                           String salary, String description, String recruiterId) {
+                           String salary, String description, String recruiterId, String category) {
         this.jobId = jobId;
         this.title = title;
         this.company = company;
@@ -22,6 +23,7 @@ public class JobCreatedEvent implements Serializable {
         this.salary = salary;
         this.description = description;
         this.recruiterId = recruiterId;
+        this.category = category;
     }
 
     public String getJobId() { return jobId; }
@@ -38,4 +40,6 @@ public class JobCreatedEvent implements Serializable {
     public void setDescription(String description) { this.description = description; }
     public String getRecruiterId() { return recruiterId; }
     public void setRecruiterId(String recruiterId) { this.recruiterId = recruiterId; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 }

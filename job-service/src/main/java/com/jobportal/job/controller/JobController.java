@@ -47,9 +47,19 @@ public class JobController {
     public ResponseEntity<ApiResponse<JobResponse>> closeJob(
             @PathVariable String jobId,
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
-            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "RECRUITER") String role) {
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
         if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
             throw new ForbiddenException("Only recruiters and admins can close jobs");
         return ResponseEntity.ok(ApiResponse.success(jobService.closeJob(jobId, userId, role), "Job closed"));
+    }
+
+    @PutMapping("/{jobId}/reopen")
+    public ResponseEntity<ApiResponse<JobResponse>> reopenJob(
+            @PathVariable String jobId,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
+        if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
+            throw new ForbiddenException("Only recruiters and admins can reopen jobs");
+        return ResponseEntity.ok(ApiResponse.success(jobService.reopenJob(jobId, userId, role), "Job reopened"));
     }
 }

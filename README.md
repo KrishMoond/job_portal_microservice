@@ -1,10 +1,10 @@
-# Job Portal Microservices
+# HireHub — Job Portal
 
-A production-ready job portal backend built with Spring Boot microservices architecture. The system supports job posting, job applications, resume management, real-time notifications, search, and analytics.
+A full-stack job portal built with a **Spring Boot microservices** backend and an **Angular 21** frontend. Supports job posting, applications, resume management, interview scheduling, real-time notifications, search, and analytics.
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
                         ┌─────────────────┐
@@ -39,37 +39,49 @@ A production-ready job portal backend built with Spring Boot microservices archi
 | api-gateway | 8080 | JWT authentication, routing, CORS |
 | user-service | 8081 | Registration, login, bookmarks, companies |
 | job-service | 8082 | Job CRUD, company linking |
-| application-service | 8083 | Job applications, interviews, chat messages |
-| resume-service | 8084 | Resume upload and management |
-| search-service | 8085 | Full-text job search |
-| notification-service | 8086 | In-app notifications, email via Mailtrap |
+| application-service | 8083 | Applications, interviews, chat messages |
+| resume-service | 8084 | Resume upload — file stored in DB or S3 |
+| search-service | 8085 | Full-text job search with PostgreSQL trigram |
+| notification-service | 8086 | In-app notifications + email via Mailtrap |
 | analytics-service | 8087 | Event tracking, job recommendations |
-| config-server | 8888 | Centralized configuration |
-| eureka-server | 8761 | Service discovery |
+| config-server | 8888 | Centralized Spring Cloud Config |
+| eureka-server | 8761 | Netflix Eureka service discovery |
 
 ---
 
 ## Tech Stack
 
+### Backend
 | Category | Technology |
 |----------|-----------|
 | Framework | Spring Boot 3.4.5 |
-| Language | Java 17 |
+| Language | Java 21 |
 | Service Discovery | Netflix Eureka |
 | API Gateway | Spring Cloud Gateway |
-| Messaging | RabbitMQ (via Docker) |
+| Messaging | RabbitMQ |
 | Messaging Pattern | Transactional Outbox |
-| Database | PostgreSQL 18 |
+| Database | PostgreSQL |
 | DB Migration | Flyway |
 | Auth | JWT (jjwt 0.11.5) |
 | HTTP Client | OpenFeign |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
 | Distributed Tracing | Zipkin + Micrometer Brave |
 | Email | Spring Mail + Mailtrap |
-| File Storage | AWS S3 |
+| File Storage | AWS S3 / DB fallback |
 | Build | Maven (multi-module) |
 | CI/CD | GitHub Actions |
 | Containerization | Docker |
+
+### Frontend
+| Category | Technology |
+|----------|-----------|
+| Framework | Angular 21 (standalone components) |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| Icons | Lucide Angular |
+| HTTP | Angular HttpClient with interceptors |
+| State | Angular Signals |
+| Change Detection | OnPush throughout |
 
 ---
 
@@ -77,9 +89,9 @@ A production-ready job portal backend built with Spring Boot microservices archi
 
 - Java 21
 - Maven 3.8+
-- PostgreSQL 18
+- Node.js 20+ and npm
+- PostgreSQL
 - Docker (for RabbitMQ and Zipkin)
-- Spring Tools Suite 5 (STS) or any IDE
 
 ---
 
@@ -89,7 +101,7 @@ A production-ready job portal backend built with Spring Boot microservices archi
 ```bash
 docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
 ```
-Management UI: `http://localhost:15672` (guest/guest)
+Management UI: `http://localhost:15672` — credentials: `guest / guest`
 
 ### Start Zipkin
 ```bash
@@ -110,23 +122,39 @@ CREATE DATABASE jobportal_analytics;
 
 ---
 
-## Running the Project
+## Running the Backend
 
-### Step 1 — Build common-lib first
+### Step 1 — Build common-lib
 ```bash
-mvn clean install -pl common-lib -Dmaven.compiler.fork=true -Dmaven.compiler.executable="C:\Program Files\Java\jdk-21\bin\javac.exe"
+mvn clean install -pl common-lib -q
 ```
 
 ### Step 2 — Build all services
 ```bash
-mvn clean package -pl user-service,job-service,application-service,resume-service,search-service,notification-service,analytics-service,api-gateway,config-server,eureka-server -am -DskipTests -Dmaven.compiler.fork=true -Dmaven.compiler.executable="C:\Program Files\Java\jdk-21\bin\javac.exe"
+mvn clean package \
+  -pl user-service,job-service,application-service,resume-service,search-service,notification-service,analytics-service,api-gateway,config-server,eureka-server \
+  --also-make -DskipTests -q
 ```
 
 ### Step 3 — Start services in order
-1. config-server (8888)
-2. eureka-server (8761)
-3. api-gateway (8080)
-4. user-service, job-service, application-service, resume-service, search-service, notification-service, analytics-service
+1. `config-server` (8888)
+2. `eureka-server` (8761)
+3. `api-gateway` (8080)
+4. All remaining services in any order
+
+---
+
+## Running the Frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+App runs at `http://localhost:4200`
+
+The Angular dev server proxies all `/api/**` requests to the gateway at `http://localhost:8080`.
 
 ---
 
@@ -136,9 +164,8 @@ mvn clean package -pl user-service,job-service,application-service,resume-servic
 ```
 http://localhost:8080/swagger-ui.html
 ```
-Use the dropdown to switch between services.
 
-### Individual Service Swagger UIs
+### Per-Service Swagger UIs
 | Service | URL |
 |---------|-----|
 | user-service | http://localhost:8081/swagger-ui/index.html |
@@ -156,8 +183,8 @@ Use the dropdown to switch between services.
 ### Auth
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | /api/users/register | Register (roles: RECRUITER, JOB_SEEKER, ADMIN) |
-| POST | /api/users/login | Login — returns JWT in Authorization header |
+| POST | /api/users/register | Register — roles: `RECRUITER`, `JOB_SEEKER`, `ADMIN` |
+| POST | /api/users/login | Login — returns JWT in `Authorization` header |
 
 ### Jobs
 | Method | Endpoint | Role | Description |
@@ -166,6 +193,7 @@ Use the dropdown to switch between services.
 | GET | /api/jobs | ALL | List all jobs |
 | GET | /api/jobs/{jobId} | ALL | Get job by ID |
 | PUT | /api/jobs/{jobId}/close | RECRUITER | Close a job |
+| PUT | /api/jobs/{jobId}/reopen | RECRUITER | Reopen a job |
 
 ### Companies
 | Method | Endpoint | Role | Description |
@@ -181,6 +209,7 @@ Use the dropdown to switch between services.
 | GET | /api/applications/job/{jobId} | RECRUITER | View applications for a job |
 | GET | /api/applications/candidate/{id} | JOB_SEEKER | View my applications |
 | PUT | /api/applications/{id}/status | RECRUITER | Update application status |
+| POST | /api/applications/{id}/offer-response | JOB_SEEKER | Accept or reject offer |
 
 ### Interviews
 | Method | Endpoint | Role | Description |
@@ -188,6 +217,14 @@ Use the dropdown to switch between services.
 | POST | /api/interviews | RECRUITER | Schedule interview |
 | PUT | /api/interviews/{id}/status | RECRUITER | Update interview status |
 | GET | /api/interviews/mine | ALL | Get my interviews |
+| GET | /api/interviews/application/{id} | ALL | Get interviews for an application |
+
+### Resumes
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| POST | /api/resumes/upload | JOB_SEEKER | Upload resume file |
+| GET | /api/resumes/user/{userId} | JOB_SEEKER | Get my resumes |
+| GET | /api/resumes/download/{resumeId} | ALL | Download resume |
 
 ### Notifications
 | Method | Endpoint | Description |
@@ -201,6 +238,7 @@ Use the dropdown to switch between services.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | /api/search/jobs?keyword=&location= | Search jobs (public) |
+| GET | /api/search/categories | Get job category counts |
 
 ### Bookmarks
 | Method | Endpoint | Role | Description |
@@ -214,9 +252,9 @@ Use the dropdown to switch between services.
 ## Messaging Architecture
 
 All inter-service events use the **Transactional Outbox Pattern**:
-1. Producer saves event to `outbox_events` table in same DB transaction
-2. `OutboxPoller` runs every 5 seconds and sends pending events to RabbitMQ
-3. Consumer services receive and process events
+1. Producer saves event to `outbox_events` table in the same DB transaction as the business operation
+2. `OutboxPoller` runs every 5 seconds and publishes pending events to RabbitMQ
+3. Consumer services receive and process events independently
 
 ### RabbitMQ Queues
 
@@ -237,32 +275,17 @@ All inter-service events use the **Transactional Outbox Pattern**:
 
 ## Security
 
-- JWT-based authentication via API Gateway
-- Gateway validates token and injects `X-User-Id` and `X-User-Role` headers
-- Role-based access control enforced at gateway level
+- JWT-based authentication enforced at the API Gateway
+- Gateway validates the token and injects `X-User-Id` and `X-User-Role` headers into downstream requests
+- Role-based access control enforced at both gateway and service level
 - Passwords hashed with BCrypt
 
 ### Roles
 | Role | Permissions |
 |------|-------------|
-| JOB_SEEKER | Apply for jobs, upload resumes, bookmarks, view notifications |
-| RECRUITER | Post jobs, manage companies, schedule interviews, view analytics |
+| JOB_SEEKER | Apply for jobs, upload resumes, bookmarks, view notifications, respond to offers |
+| RECRUITER | Post jobs, manage companies, schedule interviews, view applications, view analytics |
 | ADMIN | Full access to all endpoints |
-
----
-
-## CI/CD
-
-GitHub Actions pipeline (`.github/workflows/ci-cd.yml`):
-
-- **On every push/PR** → builds and tests all services
-- **On push to main** → builds Docker images and pushes to Docker Hub
-
-### Required GitHub Secrets
-| Secret | Description |
-|--------|-------------|
-| DOCKER_HUB_USERNAME | Docker Hub username |
-| DOCKER_HUB_TOKEN | Docker Hub access token |
 
 ---
 
@@ -273,14 +296,16 @@ job-portal-microservices/
 ├── common-lib/              # Shared DTOs, events, exceptions
 ├── config-server/           # Spring Cloud Config Server
 ├── eureka-server/           # Service discovery
-├── api-gateway/             # JWT filter, routing
+├── api-gateway/             # JWT filter, routing, CORS
 ├── user-service/            # Users, auth, bookmarks, companies
 ├── job-service/             # Jobs, outbox
 ├── application-service/     # Applications, interviews, messages
-├── resume-service/          # Resume upload, S3 storage
-├── search-service/          # Job search with PostgreSQL trigram
+├── resume-service/          # Resume upload, DB/S3 storage
+├── search-service/          # Full-text search with PostgreSQL trigram
 ├── notification-service/    # Email + in-app notifications
 ├── analytics-service/       # Event tracking, recommendations
+├── frontend/                # Angular 21 SPA
+├── docker-compose.yml       # Infrastructure (RabbitMQ, Zipkin, PostgreSQL)
 ├── .github/workflows/       # CI/CD pipeline
 └── pom.xml                  # Parent POM
 ```
@@ -289,20 +314,40 @@ job-portal-microservices/
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| JWT_SECRET | (set in properties) | JWT signing secret |
-| spring.datasource.password | root | PostgreSQL password |
-| spring.rabbitmq.password | guest | RabbitMQ password |
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+| `spring.datasource.password` | PostgreSQL password |
+| `spring.rabbitmq.password` | RabbitMQ password |
+| `spring.mail.username` | Mailtrap SMTP username |
+| `spring.mail.password` | Mailtrap SMTP password |
+| `aws.s3.bucket` | S3 bucket name for resume storage |
+| `aws.access-key` | AWS access key |
+| `aws.secret-key` | AWS secret key |
+
+---
+
+## CI/CD
+
+GitHub Actions pipeline (`.github/workflows/ci-cd.yml`):
+
+- **On every push / PR** → builds and tests all services
+- **On push to `main`** → builds Docker images and pushes to Docker Hub
+
+### Required GitHub Secrets
+| Secret | Description |
+|--------|-------------|
+| `DOCKER_USERNAME` | Docker Hub username |
+| `DOCKER_PASSWORD` | Docker Hub access token |
 
 ---
 
 ## Distributed Tracing
 
-All services are configured with Micrometer + Zipkin:
-- Sampling rate: 100% (`probability=1.0`)
+All services are instrumented with Micrometer + Zipkin:
+- Sampling rate: 100%
 - Zipkin UI: `http://localhost:9411`
-- Trace ID and Span ID included in all log lines
+- Trace ID and Span ID are included in all log lines
 
 ---
 

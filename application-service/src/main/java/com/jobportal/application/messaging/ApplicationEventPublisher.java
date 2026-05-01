@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jobportal.application.outbox.OutboxEvent;
 import com.jobportal.application.outbox.OutboxEventRepository;
+import com.jobportal.common.events.ApplicationStatusChangedEvent;
 import com.jobportal.common.events.JobAppliedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,8 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApplicationEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationEventPublisher.class);
-    public static final String JOB_APPLIED_ROUTING_KEY        = "job.applied";
-    public static final String INTERVIEW_SCHEDULED_ROUTING_KEY = "interview.scheduled";
+    public static final String JOB_APPLIED_ROUTING_KEY              = "job.applied";
+    public static final String INTERVIEW_SCHEDULED_ROUTING_KEY       = "interview.scheduled";
+    public static final String APPLICATION_STATUS_CHANGED_ROUTING_KEY = "application.status.changed";
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
@@ -30,6 +32,12 @@ public class ApplicationEventPublisher {
     public void publishJobApplied(JobAppliedEvent event) {
         outboxEventRepository.save(new OutboxEvent("JOB_APPLIED", JOB_APPLIED_ROUTING_KEY, toJson(event)));
         log.info("[OUTBOX] Saved JobAppliedEvent to outbox | applicationId={}", event.getApplicationId());
+    }
+
+    @Transactional
+    public void publishStatusChanged(ApplicationStatusChangedEvent event) {
+        outboxEventRepository.save(new OutboxEvent("APPLICATION_STATUS_CHANGED", APPLICATION_STATUS_CHANGED_ROUTING_KEY, toJson(event)));
+        log.info("[OUTBOX] Saved ApplicationStatusChangedEvent to outbox | applicationId={} | status={}", event.getApplicationId(), event.getNewStatus());
     }
 
     private String toJson(Object obj) {

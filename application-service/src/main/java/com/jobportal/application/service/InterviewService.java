@@ -40,8 +40,16 @@ public class InterviewService {
 
     @Transactional
     public Interview schedule(InterviewRequest req, String recruiterId) {
-        if (!applicationRepository.existsById(req.getApplicationId()))
+        System.out.println("[DEBUG] Scheduling interview - ApplicationId: " + req.getApplicationId() + 
+                           ", CandidateId: " + req.getCandidateId() + 
+                           ", ScheduledAt: " + req.getScheduledAt() + 
+                           ", MeetingLink: " + req.getMeetingLink() + 
+                           ", RecruiterId: " + recruiterId);
+        
+        if (!applicationRepository.existsById(req.getApplicationId())) {
+            System.err.println("[ERROR] Application not found: " + req.getApplicationId());
             throw new ResourceNotFoundException("Application not found: " + req.getApplicationId());
+        }
 
         Interview interview = new Interview();
         interview.setApplicationId(req.getApplicationId());
@@ -50,7 +58,10 @@ public class InterviewService {
         interview.setScheduledAt(req.getScheduledAt());
         interview.setMeetingLink(req.getMeetingLink());
         interview.setStatus("SCHEDULED");
+        
+        System.out.println("[DEBUG] Saving interview entity: " + interview);
         Interview saved = interviewRepository.save(interview);
+        System.out.println("[DEBUG] Interview saved successfully with ID: " + saved.getId());
 
         InterviewScheduledEvent event = new InterviewScheduledEvent();
         event.setInterviewId(saved.getId());
@@ -62,6 +73,8 @@ public class InterviewService {
 
         outboxEventRepository.save(new OutboxEvent(
             "INTERVIEW_SCHEDULED", INTERVIEW_SCHEDULED_ROUTING_KEY, toJson(event)));
+        
+        System.out.println("[DEBUG] Outbox event created for interview: " + saved.getId());
 
         return saved;
     }

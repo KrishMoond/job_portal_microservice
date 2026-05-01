@@ -11,6 +11,7 @@ public class JobResponse {
     private String location;
     private String salary;
     private String description;
+    private String category;
     private String recruiterId;
     private Job.Status status;
     private LocalDateTime createdAt;
@@ -31,6 +32,8 @@ public class JobResponse {
     public void setSalary(String salary) { this.salary = salary; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
     public String getRecruiterId() { return recruiterId; }
     public void setRecruiterId(String recruiterId) { this.recruiterId = recruiterId; }
     public Job.Status getStatus() { return status; }

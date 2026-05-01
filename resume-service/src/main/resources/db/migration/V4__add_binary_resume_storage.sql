@@ -1,0 +1,10 @@
+ALTER TABLE resumes
+  ADD COLUMN IF NOT EXISTS content_type VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS file_size BIGINT,
+  ADD COLUMN IF NOT EXISTS file_data BYTEA,
+  ADD COLUMN IF NOT EXISTS storage_type VARCHAR(20) DEFAULT 'URL';
+
+UPDATE resumes
+SET storage_type = 'URL'
+WHERE storage_type IS NULL;
+

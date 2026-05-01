@@ -1,39 +1,69 @@
-# Build output
+# ── Build output ──────────────────────────────────────────────────────────────
 target/
 *.class
 *.jar
 *.war
+*.ear
 
-# IDE - Eclipse / STS
+# ── IDE - Eclipse / STS ───────────────────────────────────────────────────────
 .metadata/
 .classpath
 .project
 .settings/
 *.launch
+.sonarlint/
 
-# IDE - IntelliJ
+# ── IDE - IntelliJ ────────────────────────────────────────────────────────────
 .idea/
 *.iml
 
-# IDE - VS Code
+# ── IDE - VS Code ─────────────────────────────────────────────────────────────
 .vscode/
 
-# OS
+# ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 
-# Logs
+# ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 *.logs
 logs/
 
-# Patch files
-*.patch
-
-# Text/Word docs at root
-*.txt
-*.docx
-*.doc
-
-# Spring Boot
+# ── Spring Boot ───────────────────────────────────────────────────────────────
 spring-shell.log
+
+# ── Temporary fix/doc markdown files at root ──────────────────────────────────
+ALL-ISSUES-FIXED.md
+FRONTEND_FIX_GUIDE.md
+INTERVIEW_SCHEDULING_FIX.md
+JOB_LIST_FREEZE_FIX.md
+PERFORMANCE_FIXES.md
+PROJECT-COMPLETE.md
+RESUME-UPLOAD-COMPLETE.md
+SENIOR_DEVELOPER_REVIEW.md
+SERVICES-DOWN-FIXED.md
+ANIMATIONS_GUIDE.md
+COLOR_SCHEME_FIX.md
+
+# ── Batch/shell scripts at root ───────────────────────────────────────────────
+*.bat
+
+# ── SQL seed/test data files at root ──────────────────────────────────────────
+MANUAL_SEED.sql
+seed-categories.sql
+seed-data-smart.sql
+seed-test-data.sql
+
+# ── Misc dev files ────────────────────────────────────────────────────────────
+api-tester.html
+repair-flyway.sql
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+
+# ── AI/tool temp folders ──────────────────────────────────────────────────────
+.codex-checkpoints/
+.kiro_tmp/

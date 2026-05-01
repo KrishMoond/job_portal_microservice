@@ -29,8 +29,12 @@ public class JobIndexConsumer {
     public void onJobCreated(String payload) {
         try {
             JobCreatedEvent event = objectMapper.readValue(payload, JobCreatedEvent.class);
-            log.info("Indexing new job: {}", event.getJobId());
-            JobSearchRecord record = new JobSearchRecord();
+            log.info("Indexing/re-indexing job: {}", event.getJobId());
+
+            // Upsert: update existing record if present (handles reopen), insert if new
+            JobSearchRecord record = jobSearchRepository.findByJobId(event.getJobId())
+                .orElse(new JobSearchRecord());
+
             record.setJobId(event.getJobId());
             record.setTitle(event.getTitle());
             record.setCompany(event.getCompany());
@@ -38,6 +42,7 @@ public class JobIndexConsumer {
             record.setSalary(event.getSalary());
             record.setDescription(event.getDescription());
             record.setRecruiterId(event.getRecruiterId());
+            record.setCategory(event.getCategory());
             record.setStatus("OPEN");
             jobSearchRepository.save(record);
         } catch (Exception e) {

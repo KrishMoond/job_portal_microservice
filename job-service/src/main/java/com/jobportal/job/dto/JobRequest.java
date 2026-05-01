@@ -14,6 +14,7 @@ public class JobRequest {
              message = "Salary format invalid (e.g. $50,000-$80,000/yr)")
     private String salary;
     private String description;
+    private String category;
 
     public JobRequest() {}
 
@@ -27,4 +28,6 @@ public class JobRequest {
     public void setSalary(String salary) { this.salary = salary; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 }
