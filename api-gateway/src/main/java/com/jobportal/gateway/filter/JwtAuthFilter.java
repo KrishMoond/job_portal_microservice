@@ -37,11 +37,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         "/webjars"
     );
 
-    private static final List<String> PUBLIC_READ_PATHS = List.of(
-        "/api/jobs",
-        "/api/companies"
-    );
-
     // Map.of() supports max 10 entries — use Map.ofEntries() for 11+
     private static final Map<String, Map<HttpMethod, List<String>>> ROLE_RULES = Map.ofEntries(
         Map.entry("/api/jobs", Map.of(
@@ -99,10 +94,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         HttpMethod method = exchange.getRequest().getMethod();
 
         if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
-            return chain.filter(exchange);
-        }
-
-        if (method == HttpMethod.GET && PUBLIC_READ_PATHS.stream().anyMatch(path::startsWith)) {
             return chain.filter(exchange);
         }
 
