@@ -36,6 +36,16 @@ import { ToastService } from '../../core/services/toast.service';
               </div>
             }
           </div>
+        } @else if (loadFailed()) {
+          <div class="bg-white rounded-2xl border border-amber-200 shadow-sm text-center py-20 px-6">
+            <lucide-icon name="alert-circle" class="w-16 h-16 text-amber-500 mx-auto mb-4"></lucide-icon>
+            <h3 class="text-lg font-semibold text-gray-900 mb-1">Notifications are temporarily unavailable</h3>
+            <p class="text-gray-500 text-sm mb-5">Your other dashboard features can still be used.</p>
+            <button (click)="loadNotifications()" class="btn-secondary py-2 px-4 text-sm inline-flex items-center gap-2">
+              <lucide-icon name="refresh-cw" class="w-4 h-4"></lucide-icon>
+              Retry
+            </button>
+          </div>
         } @else if (notifications().length === 0) {
           <div class="bg-white rounded-2xl border border-gray-200 shadow-sm text-center py-20">
             <lucide-icon name="bell" class="w-16 h-16 text-gray-300 mx-auto mb-4"></lucide-icon>
@@ -82,16 +92,25 @@ export class NotificationsComponent implements OnInit {
 
   notifications = signal<any[]>([]);
   loading = signal(true);
+  loadFailed = signal(false);
   unreadCount = () => this.notifications().filter(n => !n.read).length;
 
   ngOnInit(): void {
+    this.loadNotifications();
+  }
+
+  loadNotifications(): void {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+
     this.api.getNotifications().subscribe({
       next: (res: any) => {
         this.notifications.set(res?.data ?? []);
+        this.loadFailed.set(false);
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Failed to load notifications');
+        this.loadFailed.set(true);
         this.loading.set(false);
       }
     });

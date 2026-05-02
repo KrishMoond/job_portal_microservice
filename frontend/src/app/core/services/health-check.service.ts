@@ -1,6 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { interval, catchError, of, tap } from 'rxjs';
+import { interval, catchError, of, tap, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -23,11 +23,16 @@ export class HealthCheckService {
   checkHealth() {
     this.isChecking.set(true);
 
-    this.http.get(this.healthCheckUrl, { 
+    this.http.get<{ status?: string }>(this.healthCheckUrl, {
       observe: 'response'
     }).pipe(
-      tap(() => {
-        this.isServerHealthy.set(true);
+      timeout(5000),
+      tap(response => {
+        const healthy = response.status >= 200
+          && response.status < 300
+          && response.body?.status === 'UP';
+
+        this.isServerHealthy.set(healthy);
         this.lastCheckTime.set(new Date());
         this.isChecking.set(false);
       }),

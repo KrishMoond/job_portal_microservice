@@ -4,5 +4,11 @@
     "changeOrigin": true,
     "secure": false,
     "logLevel": "warn"
+  },
+  "/actuator": {
+    "target": "http://localhost:8080",
+    "changeOrigin": true,
+    "secure": false,
+    "logLevel": "warn"
   }
 }
