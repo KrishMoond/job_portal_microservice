@@ -142,4 +142,195 @@ class JobServiceTest {
         assertThatThrownBy(() -> jobService.closeJob("job-1", "other-user", "RECRUITER"))
             .isInstanceOf(ForbiddenException.class);
     }
+
+    @Test
+    void closeJob_adminCanCloseWithoutRequesterId() {
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+        when(jobRepository.save(any(Job.class))).thenReturn(savedJob);
+
+        JobResponse response = jobService.closeJob("job-1", null, "ADMIN");
+
+        assertThat(response.getStatus()).isEqualTo(Job.Status.CLOSED);
+        verify(eventPublisher).publishJobClosed(any());
+    }
+
+    @Test
+    void closeJob_blankRequester_throwsForbidden() {
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+
+        assertThatThrownBy(() -> jobService.closeJob("job-1", " ", "RECRUITER"))
+            .isInstanceOf(ForbiddenException.class)
+            .hasMessage("Authentication required to close job");
+    }
+
+    @Test
+    void closeJob_notFound_throwsResourceNotFound() {
+        when(jobRepository.findById("missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> jobService.closeJob("missing", "user-1", "RECRUITER"))
+            .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void reopenJob_success() {
+        savedJob.setStatus(Job.Status.CLOSED);
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+        when(jobRepository.save(any(Job.class))).thenReturn(savedJob);
+
+        JobResponse response = jobService.reopenJob("job-1", "user-1", "RECRUITER");
+
+        assertThat(response.getStatus()).isEqualTo(Job.Status.OPEN);
+        verify(eventPublisher).publishJobCreated(any());
+    }
+
+    @Test
+    void reopenJob_adminCanReopenWithoutRequesterId() {
+        savedJob.setStatus(Job.Status.CLOSED);
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+        when(jobRepository.save(any(Job.class))).thenReturn(savedJob);
+
+        JobResponse response = jobService.reopenJob("job-1", null, "ADMIN");
+
+        assertThat(response.getStatus()).isEqualTo(Job.Status.OPEN);
+    }
+
+    @Test
+    void reopenJob_blankRequester_throwsForbidden() {
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+
+        assertThatThrownBy(() -> jobService.reopenJob("job-1", " ", "RECRUITER"))
+            .isInstanceOf(ForbiddenException.class)
+            .hasMessage("Authentication required to reopen job");
+    }
+
+    @Test
+    void reopenJob_notOwner_throwsForbidden() {
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+
+        assertThatThrownBy(() -> jobService.reopenJob("job-1", "other-user", "RECRUITER"))
+            .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void reopenJob_alreadyOpen_throwsBadRequest() {
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(savedJob));
+
+        assertThatThrownBy(() -> jobService.reopenJob("job-1", "user-1", "RECRUITER"))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("Job is already open");
+    }
+
+    @Test
+    void reopenJob_notFound_throwsResourceNotFound() {
+        when(jobRepository.findById("missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> jobService.reopenJob("missing", "user-1", "RECRUITER"))
+            .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void createJob_userServiceUnavailable_allowsRecruiterTokenRole() {
+        when(userServiceClient.getUserById("user-1")).thenThrow(new RuntimeException("down"));
+        when(userServiceClient.getCompanyById("company-1")).thenReturn(Map.of("name", "Tech Corp"));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> {
+            Job job = invocation.getArgument(0);
+            job.setId("job-1");
+            return job;
+        });
+
+        JobResponse response = jobService.createJob(req, "user-1", "RECRUITER");
+
+        assertThat(response.getJobId()).isEqualTo("job-1");
+    }
+
+    @Test
+    void createJob_userServiceUnavailable_rejectsJobSeekerTokenRole() {
+        when(userServiceClient.getUserById("user-1")).thenThrow(new RuntimeException("down"));
+
+        assertThatThrownBy(() -> jobService.createJob(req, "user-1", "JOB_SEEKER"))
+            .isInstanceOf(ForbiddenException.class)
+            .hasMessage("Only recruiters and admins can post jobs");
+    }
+
+    @Test
+    void createJob_userDataMissing_throwsForbidden() {
+        when(userServiceClient.getUserById("user-1")).thenReturn(Map.of());
+
+        assertThatThrownBy(() -> jobService.createJob(req, "user-1", "RECRUITER"))
+            .isInstanceOf(ForbiddenException.class)
+            .hasMessage("User not found: user-1");
+    }
+
+    @Test
+    void createJob_roleMismatch_throwsForbidden() {
+        when(userServiceClient.getUserById("user-1"))
+            .thenReturn(Map.of("data", Map.of("role", "ADMIN")));
+
+        assertThatThrownBy(() -> jobService.createJob(req, "user-1", "RECRUITER"))
+            .isInstanceOf(ForbiddenException.class)
+            .hasMessageContaining("Role mismatch");
+    }
+
+    @Test
+    void createJob_companyLookupFallsBackToCompanyId() {
+        when(userServiceClient.getUserById("user-1"))
+            .thenReturn(Map.of("data", Map.of("role", "RECRUITER")));
+        when(userServiceClient.getCompanyById("company-1")).thenThrow(new RuntimeException("down"));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> {
+            Job job = invocation.getArgument(0);
+            job.setId("job-1");
+            return job;
+        });
+
+        JobResponse response = jobService.createJob(req, "user-1", "RECRUITER");
+
+        assertThat(response.getCompany()).isEqualTo("company-1");
+    }
+
+    @Test
+    void createJob_companyNotFound_throwsResourceNotFound() {
+        when(userServiceClient.getUserById("user-1"))
+            .thenReturn(Map.of("data", Map.of("role", "RECRUITER")));
+        when(userServiceClient.getCompanyById("company-1")).thenReturn(null);
+
+        assertThatThrownBy(() -> jobService.createJob(req, "user-1", "RECRUITER"))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Company not found: company-1");
+    }
+
+    @Test
+    void createJob_resolvesRequestedAndInferredCategories() {
+        when(userServiceClient.getUserById("user-1"))
+            .thenReturn(Map.of("data", Map.of("role", "RECRUITER")));
+        when(userServiceClient.getCompanyById("company-1")).thenReturn(Map.of("name", "Tech Corp"));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> {
+            Job job = invocation.getArgument(0);
+            job.setId("job-1");
+            return job;
+        });
+
+        req.setCategory("  Custom  ");
+        assertThat(jobService.createJob(req, "user-1", "RECRUITER").getCategory()).isEqualTo("Custom");
+
+        req.setCategory(null);
+        assertCategory("Design", "UX Designer", "Figma visual systems");
+        assertCategory("Marketing", "SEO Lead", "brand campaign");
+        assertCategory("Finance", "Auditor", "tax accounting");
+        assertCategory("Healthcare", "Nurse", "clinical medical role");
+        assertCategory("Support", "Helpdesk", "customer success");
+        assertCategory("Content", "Copywriter", "editor content");
+        assertCategory("Business", "Business Analyst", "operations strategy");
+        assertCategory("Intern", "Graduate Trainee", "internship");
+        assertCategory("Engineering", null, null);
+    }
+
+    private void assertCategory(String expected, String title, String description) {
+        req.setCategory(null);
+        req.setTitle(title);
+        req.setDescription(description);
+
+        JobResponse response = jobService.createJob(req, "user-1", "RECRUITER");
+
+        assertThat(response.getCategory()).isEqualTo(expected);
+    }
 }

@@ -332,6 +332,7 @@ job-portal-microservices/
 GitHub Actions pipeline (`.github/workflows/ci-cd.yml`):
 
 - **On every push / PR** → builds and tests all services
+- **When SonarQube secrets are configured** → runs SonarQube analysis with JaCoCo coverage
 - **On push to `main`** → builds Docker images and pushes to Docker Hub
 
 ### Required GitHub Secrets
@@ -339,6 +340,26 @@ GitHub Actions pipeline (`.github/workflows/ci-cd.yml`):
 |--------|-------------|
 | `DOCKER_USERNAME` | Docker Hub username |
 | `DOCKER_PASSWORD` | Docker Hub access token |
+| `SONAR_HOST_URL` | SonarQube server URL, for example `https://sonarqube.example.com` |
+| `SONAR_TOKEN` | SonarQube project analysis token |
+
+---
+
+## SonarQube
+
+Start the local SonarQube stack:
+
+```bash
+docker compose up -d sonarqube
+```
+
+Open `http://localhost:9000`, sign in with `admin` / `admin`, create a project token, then run:
+
+```bash
+mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar -Dsonar.token=<token>
+```
+
+The Maven parent POM pins the Sonar scanner version and publishes JaCoCo XML reports from all backend modules. `sonar-project.properties` is also present for scanner-based tooling that expects a project file.
 
 ---
 

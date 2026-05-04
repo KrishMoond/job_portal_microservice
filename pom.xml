@@ -21,6 +21,24 @@
     <maven.compiler.target>17</maven.compiler.target>
     <maven.compiler.release>17</maven.compiler.release>
     <spring-cloud.version>2024.0.1</spring-cloud.version>
+    <sonar-maven-plugin.version>5.5.0.6356</sonar-maven-plugin.version>
+    <sonar.projectKey>Job-Portal-Microservices</sonar.projectKey>
+    <sonar.projectName>Job Portal Microservices</sonar.projectName>
+    <sonar.host.url>http://localhost:9000</sonar.host.url>
+    <sonar.coverage.jacoco.xmlReportPaths>**/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+    <sonar.coverage.exclusions>
+      **/*Application.java,
+      **/config/**,
+      **/dto/**,
+      **/model/**,
+      **/events/**,
+      **/outbox/**,
+      **/exception/**,
+      **/repository/**,
+      **/client/**
+    </sonar.coverage.exclusions>
+    <sonar.exclusions>**/target/**,**/node_modules/**,**/dist/**,**/build/**,**/*.log</sonar.exclusions>
+    <sonar.test.exclusions>**/src/test/**</sonar.test.exclusions>
   </properties>
 
   <modules>
@@ -78,4 +96,35 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>${sonar-maven-plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.12</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals><goal>prepare-agent</goal></goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>verify</phase>
+            <goals><goal>report</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>

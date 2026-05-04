@@ -97,6 +97,63 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void apply_missingJobData_throwsResourceNotFound() {
+        when(jobServiceClient.getJobById("job-1")).thenReturn(Map.of());
+
+        assertThatThrownBy(() -> applicationService.apply(applyReq))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessage("Job not found: job-1");
+    }
+
+    @Test
+    void apply_nonJobSeekerCandidate_throwsForbidden() {
+        when(jobServiceClient.getJobById("job-1"))
+            .thenReturn(Map.of("data", Map.of("title", "Backend Developer", "status", "OPEN")));
+        when(applicationRepository.existsByJobIdAndCandidateId("job-1", "user-1")).thenReturn(false);
+        when(userServiceClient.getUserById("user-1"))
+            .thenReturn(Map.of("data", Map.of("email", "recruiter@example.com", "role", "RECRUITER")));
+
+        assertThatThrownBy(() -> applicationService.apply(applyReq))
+            .isInstanceOf(ForbiddenException.class)
+            .hasMessage("Only job seekers can apply for jobs");
+    }
+
+    @Test
+    void apply_missingUserData_continuesWithoutEmail() {
+        when(jobServiceClient.getJobById("job-1"))
+            .thenReturn(Map.of("data", Map.of("title", "Backend Developer", "status", "OPEN", "recruiterId", "rec-1")));
+        when(applicationRepository.existsByJobIdAndCandidateId("job-1", "user-1")).thenReturn(false);
+        when(userServiceClient.getUserById("user-1")).thenReturn(Map.of());
+        when(applicationRepository.save(any(JobApplication.class))).thenAnswer(invocation -> {
+            JobApplication app = invocation.getArgument(0);
+            app.setId("app-1");
+            return app;
+        });
+
+        JobApplication result = applicationService.apply(applyReq);
+
+        assertThat(result.getCandidateEmail()).isNull();
+        assertThat(result.getRecruiterId()).isEqualTo("rec-1");
+    }
+
+    @Test
+    void apply_userServiceUnavailable_continuesWithoutEmail() {
+        when(jobServiceClient.getJobById("job-1"))
+            .thenReturn(Map.of("data", Map.of("title", "Backend Developer", "status", "OPEN")));
+        when(applicationRepository.existsByJobIdAndCandidateId("job-1", "user-1")).thenReturn(false);
+        when(userServiceClient.getUserById("user-1")).thenThrow(new RuntimeException("down"));
+        when(applicationRepository.save(any(JobApplication.class))).thenAnswer(invocation -> {
+            JobApplication app = invocation.getArgument(0);
+            app.setId("app-1");
+            return app;
+        });
+
+        JobApplication result = applicationService.apply(applyReq);
+
+        assertThat(result.getCandidateEmail()).isNull();
+    }
+
+    @Test
     void getByCandidateId_ownApplications_success() {
         when(applicationRepository.findByCandidateId("user-1")).thenReturn(List.of(savedApp));
 
@@ -112,6 +169,15 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void getByCandidateId_adminCanViewOtherUser() {
+        when(applicationRepository.findByCandidateId("user-1")).thenReturn(List.of(savedApp));
+
+        List<JobApplication> result = applicationService.getByCandidateId("user-1", "admin-1", "ADMIN");
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
     void updateStatus_notOwner_throwsForbidden() {
         when(applicationRepository.findById("app-1")).thenReturn(Optional.of(savedApp));
         when(jobServiceClient.getJobById("job-1"))
@@ -122,5 +188,15 @@ class ApplicationServiceTest {
 
         assertThatThrownBy(() -> applicationService.updateStatus("app-1", req, "other-recruiter", "RECRUITER"))
             .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void updateStatus_notFound_throwsResourceNotFound() {
+        when(applicationRepository.findById("missing")).thenReturn(Optional.empty());
+        StatusUpdateRequest req = new StatusUpdateRequest();
+        req.setStatus(JobApplication.Status.SHORTLISTED);
+
+        assertThatThrownBy(() -> applicationService.updateStatus("missing", req, "rec-1", "RECRUITER"))
+            .isInstanceOf(ResourceNotFoundException.class);
     }
 }

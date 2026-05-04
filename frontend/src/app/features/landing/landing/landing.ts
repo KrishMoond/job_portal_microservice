@@ -70,7 +70,7 @@ function iconFor(category: string): string {
             </a>
           </div>
 
-          <p class="text-primary-light/80 text-sm mt-8 font-medium animate-fade-in" style="animation-delay:450ms">
+          <p class="inline-flex items-center justify-center bg-white/90 border border-white/70 text-slate-900 text-sm md:text-base mt-7 px-4 py-2 rounded-full font-bold shadow-sm animate-fade-in" style="animation-delay:450ms">
             @if (!loadingStats()) {
               {{ totalJobs() }} live jobs &nbsp;•&nbsp; {{ openJobs() }} actively hiring
             } @else {
