@@ -37,7 +37,7 @@ A full-stack job portal built with a **Spring Boot microservices** backend and a
 | Service | Port | Description |
 |---------|------|-------------|
 | api-gateway | 8080 | JWT authentication, routing, CORS |
-| user-service | 8081 | Registration, login, bookmarks, companies |
+| user-service | 8081 | Registration, login, 2FA OTP, bookmarks, companies |
 | job-service | 8082 | Job CRUD, company linking |
 | application-service | 8083 | Applications, interviews, chat messages |
 | resume-service | 8084 | Resume upload — file stored in DB or S3 |
@@ -63,6 +63,8 @@ A full-stack job portal built with a **Spring Boot microservices** backend and a
 | Database | PostgreSQL |
 | DB Migration | Flyway |
 | Auth | JWT (jjwt 0.11.5) |
+| 2FA | OTP via email (BCrypt hashed, 3-attempt lockout) |
+| Resilience | Resilience4j (circuit breaker + retry) |
 | HTTP Client | OpenFeign |
 | API Docs | SpringDoc OpenAPI (Swagger UI) |
 | Distributed Tracing | Zipkin + Micrometer Brave |
@@ -119,6 +121,28 @@ CREATE DATABASE jobportal_search;
 CREATE DATABASE jobportal_notifications;
 CREATE DATABASE jobportal_analytics;
 ```
+
+---
+
+## Environment Setup
+
+Copy `.env.example` to `.env` and fill in your values — the `.env` file is gitignored and never committed.
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description |
+|----------|-------------|
+| `JWT_SECRET` | JWT signing secret (min 32 chars) |
+| `DB_USERNAME` | PostgreSQL username |
+| `DB_PASSWORD` | PostgreSQL password |
+| `RABBITMQ_PASSWORD` | RabbitMQ password |
+| `MAIL_USERNAME` | Mailtrap SMTP username |
+| `MAIL_PASSWORD` | Mailtrap SMTP password |
+| `AWS_S3_BUCKET` | S3 bucket name for resume storage |
+| `AWS_ACCESS_KEY` | AWS access key |
+| `AWS_SECRET_KEY` | AWS secret key |
 
 ---
 
@@ -184,7 +208,24 @@ http://localhost:8080/swagger-ui.html
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /api/users/register | Register — roles: `RECRUITER`, `JOB_SEEKER`, `ADMIN` |
-| POST | /api/users/login | Login — returns JWT in `Authorization` header |
+| POST | /api/users/verify-email | Verify registration OTP — returns JWT |
+| POST | /api/users/resend-otp | Resend OTP (registration or login) |
+| POST | /api/users/login | Login — sends login OTP, returns `{email}` |
+| POST | /api/users/verify-login-otp | Submit login OTP — returns JWT in `Authorization` header |
+
+### Auth Flow
+
+```
+Register → POST /register
+         → POST /verify-email (OTP from email)
+         → JWT issued ✓
+
+Login    → POST /login
+         → POST /verify-login-otp (OTP from email)
+         → JWT issued ✓
+```
+
+Every login triggers a fresh OTP sent to the registered email address (2FA on every login). The OTP is BCrypt-hashed in the database, expires in 10 minutes, and is invalidated after 3 failed attempts.
 
 ### Jobs
 | Method | Endpoint | Role | Description |
@@ -256,6 +297,8 @@ All inter-service events use the **Transactional Outbox Pattern**:
 2. `OutboxPoller` runs every 5 seconds and publishes pending events to RabbitMQ
 3. Consumer services receive and process events independently
 
+Failed publish attempts are retried up to **5 times**. After 5 failures the event is marked `dead_lettered = true` and excluded from future polls.
+
 ### RabbitMQ Queues
 
 | Queue | Producer | Consumer |
@@ -279,6 +322,24 @@ All inter-service events use the **Transactional Outbox Pattern**:
 - Gateway validates the token and injects `X-User-Id` and `X-User-Role` headers into downstream requests
 - Role-based access control enforced at both gateway and service level
 - Passwords hashed with BCrypt
+- OTPs BCrypt-hashed before storage (VARCHAR 60), expire after 10 minutes, invalidated after 3 failed attempts
+- No credentials committed — all secrets via environment variables, `.env` gitignored
+- CORS handled exclusively at the API Gateway; all downstream `CorsConfig` files are neutralized
+
+### Public Gateway Paths (no JWT required)
+```
+/api/users/register
+/api/users/login
+/api/users/verify-email
+/api/users/verify-login-otp
+/api/users/resend-otp
+/api/search/jobs
+/api/search/categories
+/actuator/**
+/swagger-ui/**
+/v3/api-docs/**
+/webjars/**
+```
 
 ### Roles
 | Role | Permissions |
@@ -286,6 +347,29 @@ All inter-service events use the **Transactional Outbox Pattern**:
 | JOB_SEEKER | Apply for jobs, upload resumes, bookmarks, view notifications, respond to offers |
 | RECRUITER | Post jobs, manage companies, schedule interviews, view applications, view analytics |
 | ADMIN | Full access to all endpoints |
+
+---
+
+## Resilience
+
+Resilience4j is configured on **application-service** (the only service with hard Feign dependencies on job-service and user-service):
+
+- **Circuit breaker** — opens at 50% failure rate over a 10-call window, stays open for 15 seconds, allows 3 calls in half-open state
+- **Retry** — max 2 attempts with exponential backoff before the circuit breaker records a failure
+- Fallback methods return a meaningful error response instead of propagating exceptions to callers
+
+---
+
+## Database Migrations (Flyway)
+
+Key migrations applied across services:
+
+| Service | Migration | Change |
+|---------|-----------|--------|
+| user-service | V6 | `verification_otp` → VARCHAR(60) for BCrypt; add `otp_attempts` INTEGER |
+| application-service | V7 | Add `retry_count` and `dead_lettered` to `outbox_events` |
+| job-service | V5 | Add `retry_count` and `dead_lettered` to `outbox_events` |
+| resume-service | V6 | Add `retry_count` and `dead_lettered` to `outbox_events` |
 
 ---
 
@@ -297,7 +381,7 @@ job-portal-microservices/
 ├── config-server/           # Spring Cloud Config Server
 ├── eureka-server/           # Service discovery
 ├── api-gateway/             # JWT filter, routing, CORS
-├── user-service/            # Users, auth, bookmarks, companies
+├── user-service/            # Users, auth, 2FA OTP, bookmarks, companies
 ├── job-service/             # Jobs, outbox
 ├── application-service/     # Applications, interviews, messages
 ├── resume-service/          # Resume upload, DB/S3 storage
@@ -306,24 +390,10 @@ job-portal-microservices/
 ├── analytics-service/       # Event tracking, recommendations
 ├── frontend/                # Angular 21 SPA
 ├── docker-compose.yml       # Infrastructure (RabbitMQ, Zipkin, PostgreSQL)
+├── .env.example             # Environment variable template
 ├── .github/workflows/       # CI/CD pipeline
 └── pom.xml                  # Parent POM
 ```
-
----
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `JWT_SECRET` | JWT signing secret (min 32 chars) |
-| `spring.datasource.password` | PostgreSQL password |
-| `spring.rabbitmq.password` | RabbitMQ password |
-| `spring.mail.username` | Mailtrap SMTP username |
-| `spring.mail.password` | Mailtrap SMTP password |
-| `aws.s3.bucket` | S3 bucket name for resume storage |
-| `aws.access-key` | AWS access key |
-| `aws.secret-key` | AWS secret key |
 
 ---
 
