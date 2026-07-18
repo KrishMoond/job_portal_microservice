@@ -17,6 +17,11 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
 export interface Job {
   jobId: string;
   title: string;

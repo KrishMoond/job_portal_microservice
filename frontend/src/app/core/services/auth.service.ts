@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { User, LoginRequest, RegisterRequest, ApiResponse } from '../../shared/models/models';
+import { User, LoginRequest, RegisterRequest, VerifyOtpRequest, ApiResponse } from '../../shared/models/models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -18,30 +18,35 @@ export class AuthService {
     return this.http.post<ApiResponse<User>>(`${environment.apiUrl}/api/users/register`, data);
   }
 
-  login(data: LoginRequest): Observable<any> {
-    return this.http.post<ApiResponse<any>>(`${environment.apiUrl}/api/users/login`, data, { observe: 'response' }).pipe(
+  verifyEmail(data: VerifyOtpRequest): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${environment.apiUrl}/api/users/verify-email`, data);
+  }
+
+  resendOtp(email: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${environment.apiUrl}/api/users/resend-otp`, { email });
+  }
+
+  login(data: LoginRequest): Observable<ApiResponse<{ email: string }>> {
+    return this.http.post<ApiResponse<{ email: string }>>(`${environment.apiUrl}/api/users/login`, data);
+  }
+
+  verifyLoginOtp(data: VerifyOtpRequest): Observable<any> {
+    return this.http.post<ApiResponse<any>>(`${environment.apiUrl}/api/users/verify-login-otp`, data, { observe: 'response' }).pipe(
       tap(response => {
         const token = response.headers.get('Authorization')?.replace('Bearer ', '');
-        if (!token) {
-          this.clearSession();
-          return;
-        }
-
+        if (!token) return;
         const user = response.body?.data;
         if (user) {
           this.setSession(token, user);
           const userId = user.userId;
           if (userId) {
-            // Fetch full profile details (name/email) for navbar/profile screens.
             this.http.get<ApiResponse<User>>(`${environment.apiUrl}/api/users/${userId}`).subscribe({
               next: (profileRes) => {
                 const fullUser = { ...user, ...(profileRes.data || {}) };
                 localStorage.setItem(this.USER_KEY, JSON.stringify(fullUser));
                 this.currentUserSubject.next(fullUser);
               },
-              error: () => {
-                // Keep minimal login payload if profile fetch fails.
-              }
+              error: () => {}
             });
           }
         }

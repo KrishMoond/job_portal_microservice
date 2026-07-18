@@ -37,6 +37,7 @@ class AuthServiceTest {
         user.setEmail("john@example.com");
         user.setPassword("encoded");
         user.setRole(User.Role.RECRUITER);
+        user.setEmailVerified(true);
 
         req = new LoginRequest();
         req.setEmail("john@example.com");
@@ -73,5 +74,16 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(req))
             .isInstanceOf(BadRequestException.class)
             .hasMessage("Invalid credentials");
+    }
+
+    @Test
+    void login_unverifiedEmail_throwsBadRequest() {
+        user.setEmailVerified(false);
+        when(userRepository.findByEmail(req.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(req.getPassword(), user.getPassword())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(req))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("Please verify your email before logging in");
     }
 }

@@ -54,6 +54,10 @@ seed-categories.sql
 seed-data-smart.sql
 seed-test-data.sql
 
+# ── Environment / secrets ────────────────────────────────────────────────────
+.env
+*.env
+
 # ── Misc dev files ────────────────────────────────────────────────────────────
 api-tester.html
 repair-flyway.sql

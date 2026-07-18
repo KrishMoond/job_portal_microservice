@@ -127,7 +127,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
-      JWT_SECRET: "j0bP0rt@lS3cur3S3cr3tK3y!XyZ#2024$$AbCdEfGhIjKlMnOpQrStUvWxYz12"
+      JWT_SECRET: ${JWT_SECRET}
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
 
   user-service:
@@ -149,7 +149,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888"
-      JWT_SECRET: "j0bP0rt@lS3cur3S3cr3tK3y!XyZ#2024$$AbCdEfGhIjKlMnOpQrStUvWxYz12"
+      JWT_SECRET: ${JWT_SECRET}
       DB_USERNAME: postgres
       DB_PASSWORD: root
       MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans

@@ -11,7 +11,7 @@ public class GatewayRoutesConfig {
     @Bean
     public RouteLocator routeLocator(RouteLocatorBuilder builder) {
         return builder.routes()
-            // API routes
+            // API routes for microservices
             .route("user-service",         r -> r.path("/api/users/**", "/api/bookmarks/**", "/api/companies/**")
                 .uri("lb://user-service"))
             .route("job-service",          r -> r.path("/api/jobs/**")

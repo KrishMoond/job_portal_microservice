@@ -38,6 +38,11 @@ public class User {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private boolean emailVerified = false;
+    private String verificationOtp;
+    private LocalDateTime verificationOtpExpiry;
+    private int otpAttempts = 0;
+
     public enum Role { JOB_SEEKER, RECRUITER, ADMIN }
     public enum ExperienceLevel { ENTRY, JUNIOR, MID, SENIOR, EXECUTIVE }
 
@@ -89,4 +94,12 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+    public String getVerificationOtp() { return verificationOtp; }
+    public void setVerificationOtp(String verificationOtp) { this.verificationOtp = verificationOtp; }
+    public LocalDateTime getVerificationOtpExpiry() { return verificationOtpExpiry; }
+    public void setVerificationOtpExpiry(LocalDateTime verificationOtpExpiry) { this.verificationOtpExpiry = verificationOtpExpiry; }
+    public int getOtpAttempts() { return otpAttempts; }
+    public void setOtpAttempts(int otpAttempts) { this.otpAttempts = otpAttempts; }
 }

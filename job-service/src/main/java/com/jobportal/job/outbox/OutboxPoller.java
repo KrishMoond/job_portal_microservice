@@ -19,6 +19,7 @@ import java.util.List;
 public class OutboxPoller {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxPoller.class);
+    private static final int MAX_RETRIES = 5;
 
     private final OutboxEventRepository outboxEventRepository;
     private final RabbitTemplate rabbitTemplate;
@@ -35,7 +36,7 @@ public class OutboxPoller {
     @Scheduled(fixedDelay = 5000)
     public void processOutboxEvents() {
         List<OutboxEvent> events = outboxEventRepository
-            .findByProcessedFalseOrderByCreatedAtAsc(PageRequest.of(0, 100));
+            .findByProcessedFalseAndDeadLetteredFalseOrderByCreatedAtAsc(PageRequest.of(0, 100));
         if (events.isEmpty()) return;
 
         log.info("[OUTBOX] Processing {} pending event(s)", events.size());
@@ -53,9 +54,17 @@ public class OutboxPoller {
             outboxEventRepository.save(event);
             log.info("[OUTBOX] Sent eventType={} routingKey={}", event.getEventType(), event.getDestination());
         } catch (Exception e) {
-            log.error("[OUTBOX] Failed eventType={} routingKey={} error={}. Will retry on next poll.",
-                event.getEventType(), event.getDestination(), e.getMessage(), e);
-            throw e;
+            int retries = event.getRetryCount() + 1;
+            event.setRetryCount(retries);
+            if (retries >= MAX_RETRIES) {
+                event.setDeadLettered(true);
+                log.error("[OUTBOX] Dead-lettered eventId={} eventType={} after {} attempts. Manual intervention required.",
+                    event.getId(), event.getEventType(), retries);
+            } else {
+                log.warn("[OUTBOX] Retry {}/{} for eventId={} eventType={}: {}",
+                    retries, MAX_RETRIES, event.getId(), event.getEventType(), e.getMessage());
+            }
+            outboxEventRepository.save(event);
         }
     }
 }

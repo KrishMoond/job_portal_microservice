@@ -13,6 +13,8 @@ public class OutboxEvent {
     @Column(nullable = false) private String destination;
     @Column(nullable = false, columnDefinition = "TEXT") private String payload;
     @Column(nullable = false) private boolean processed = false;
+    @Column(nullable = false) private int retryCount = 0;
+    @Column(nullable = false) private boolean deadLettered = false;
     private LocalDateTime createdAt;
 
     public OutboxEvent() {}
@@ -31,5 +33,9 @@ public class OutboxEvent {
     public String getPayload() { return payload; }
     public boolean isProcessed() { return processed; }
     public void setProcessed(boolean processed) { this.processed = processed; }
+    public int getRetryCount() { return retryCount; }
+    public void setRetryCount(int retryCount) { this.retryCount = retryCount; }
+    public boolean isDeadLettered() { return deadLettered; }
+    public void setDeadLettered(boolean deadLettered) { this.deadLettered = deadLettered; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -26,6 +27,7 @@ class UserServiceTest {
 
     @Mock UserRepository userRepository;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock JavaMailSender mailSender;
     @InjectMocks UserService userService;
 
     private RegisterRequest req;

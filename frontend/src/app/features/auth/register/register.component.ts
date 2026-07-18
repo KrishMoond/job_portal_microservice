@@ -62,12 +62,16 @@ export class RegisterComponent {
     this.authService.register(formValue).subscribe({
       next: () => {
         this.isLoading.set(false);
-        this.toastService.success('Registration successful! Please login.');
-        this.router.navigate(['/login']);
+        this.toastService.success('Registration successful! Please check your email for the OTP.');
+        this.router.navigate(['/verify-email'], { queryParams: { email: formValue.email } });
       },
       error: (error: Error) => {
-        // ✅ Update signals in error handler
         this.isLoading.set(false);
+        if (error.message.includes('UNVERIFIED_EMAIL')) {
+          this.toastService.success('A new OTP has been sent. Please verify your email.');
+          this.router.navigate(['/verify-email'], { queryParams: { email: formValue.email } });
+          return;
+        }
         this.errorMessage.set(error.message || 'Registration failed. Please try again.');
       }
     });

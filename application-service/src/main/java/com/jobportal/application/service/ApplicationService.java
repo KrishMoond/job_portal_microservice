@@ -12,6 +12,8 @@ import com.jobportal.common.events.JobAppliedEvent;
 import com.jobportal.common.exception.BadRequestException;
 import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.common.exception.ResourceNotFoundException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,8 @@ public class ApplicationService {
 
     @org.springframework.transaction.annotation.Transactional
     @SuppressWarnings("unchecked")
+    @CircuitBreaker(name = "job-service", fallbackMethod = "applyJobServiceFallback")
+    @Retry(name = "job-service")
     public JobApplication apply(ApplyRequest req) {
         // 1. Fetch job via Feign — fail fast if job not found
         Map<String, Object> jobData = null;
@@ -99,6 +103,14 @@ public class ApplicationService {
         return application;
     }
 
+    @SuppressWarnings("unchecked")
+    public JobApplication applyJobServiceFallback(ApplyRequest req, Exception ex) {
+        log.error("[CB] job-service circuit open or failed during apply jobId={}: {}", req.getJobId(), ex.getMessage());
+        throw new ResourceNotFoundException("Job service is temporarily unavailable. Please try again shortly.");
+    }
+
+    @CircuitBreaker(name = "job-service", fallbackMethod = "getByJobIdFallback")
+    @Retry(name = "job-service")
     public List<JobApplication> getByJobId(String jobId, String requesterId, String role) {
         if (!"ADMIN".equals(role)) {
             // Fast-path: if we already have applications, validate recruiter ownership without calling job-service.
@@ -121,6 +133,12 @@ public class ApplicationService {
             if (!recruiterId.equals(requesterId))
                 throw new ForbiddenException("You can only view applications for your own jobs");
         }
+        return applicationRepository.findByJobId(jobId);
+    }
+
+    public List<JobApplication> getByJobIdFallback(String jobId, String requesterId, String role, Exception ex) {
+        log.error("[CB] job-service circuit open during getByJobId jobId={}: {}", jobId, ex.getMessage());
+        // Return cached applications without re-validating recruiter ownership via job-service
         return applicationRepository.findByJobId(jobId);
     }
 

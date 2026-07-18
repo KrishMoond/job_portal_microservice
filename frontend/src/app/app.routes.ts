@@ -15,6 +15,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'verify-email',
+    loadComponent: () => import('./features/auth/verify-email/verify-email.component').then(m => m.VerifyEmailComponent)
+  },
+  {
+    path: 'verify-login-otp',
+    loadComponent: () => import('./features/auth/verify-login-otp/verify-login-otp.component').then(m => m.VerifyLoginOtpComponent)
+  },
+  {
     path: 'jobs',
     loadComponent: () => import('./features/jobs/job-list/job-list.component').then(m => m.JobListComponent),
     canActivate: [authGuard]

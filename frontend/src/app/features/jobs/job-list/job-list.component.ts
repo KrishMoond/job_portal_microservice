@@ -247,7 +247,6 @@ import { RippleDirective } from '../../../shared/directives/ripple.directive';
             <button (click)="clearFilters()" class="text-xs text-gray-500 hover:text-gray-700 underline font-medium ml-2">Clear all</button>
           </div>
           }
-
           <!-- Recommendations Carousel (Backend Integrated) -->
           @if (isJobSeeker && recommendedJobs.length > 0) {
             <div class="mb-8 p-6 bg-gradient-to-r from-primary-light via-white to-primary-light rounded-3xl border border-primary/10 shadow-sm animate-fade-in relative overflow-hidden">
@@ -389,6 +388,8 @@ import { RippleDirective } from '../../../shared/directives/ripple.directive';
                             [class.fill-primary]="isBookmarked(job.jobId || job['id'])">
                           </lucide-icon>
                         </button>
+        
+    
                         <a [routerLink]="['/jobs', job.jobId || job['id']]" appRipple class="btn-primary py-2 px-6 text-sm !rounded-lg shadow-sm">View details</a>
                       </div>
                     </div>

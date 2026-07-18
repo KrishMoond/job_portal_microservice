@@ -517,15 +517,15 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
     this.auth.login({ email: this.email(), password: this.password() }).subscribe({
       next: (res: any) => {
-        const role = res.body?.data?.role;
-        this.router.navigate([role === 'RECRUITER' ? '/recruiter/dashboard' : '/jobs']);
+        const email = res?.data?.email || this.email();
+        this.router.navigate(['/verify-login-otp'], { queryParams: { email } });
       },
       error: (err: any) => {
         this.loading.set(false);
+        const msg: string = err.error?.message || err.message || 'Invalid email or password';
         this.errorState.set(true);
-        this.errorMessage.set(err.error?.message || 'Invalid email or password');
-        this.toast.error(this.errorMessage());
-        // Shake the card
+        this.errorMessage.set(msg);
+        this.toast.error(msg);
         this.shaking.set(true);
         setTimeout(() => this.shaking.set(false), 520);
       }

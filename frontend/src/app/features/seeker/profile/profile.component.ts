@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +10,7 @@ import { ToastService } from '../../../core/services/toast.service';
 @Component({
   selector: 'app-profile',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, RouterLink, FormsModule, LucideAngularModule],
   template: `
     <div class="min-h-screen bg-gray-50 py-10 px-6">
@@ -184,6 +185,7 @@ export class ProfileComponent implements OnInit {
   private auth = inject(AuthService);
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   profile: any = null;
   loading = true;
@@ -242,6 +244,7 @@ export class ProfileComponent implements OnInit {
         error: (err) => {
           this.toast.error('Failed to update profile');
           this.savingProfile = false;
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -262,6 +265,7 @@ export class ProfileComponent implements OnInit {
         error: (err) => {
           this.toast.error('Failed to update profile');
           this.savingProfile = false;
+          this.cdr.markForCheck();
         }
       });
     }
@@ -282,6 +286,7 @@ export class ProfileComponent implements OnInit {
     this.toast.success('Profile updated successfully');
     this.savingProfile = false;
     this.editMode = false;
+    this.cdr.markForCheck();
   }
 
   selectedResumeFile: File | null = null;
@@ -305,10 +310,12 @@ export class ProfileComponent implements OnInit {
         this.profile = full;
         this.initial = (full.name?.charAt(0) || 'U').toUpperCase();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.toast.warning('Profile details could not be refreshed');
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
 
@@ -322,10 +329,12 @@ export class ProfileComponent implements OnInit {
         const list = Array.isArray(res) ? res : (res?.data || []);
         this.resumes = list;
         this.resumeLoading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.resumes = [];
         this.resumeLoading = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -341,11 +350,13 @@ export class ProfileComponent implements OnInit {
         this.toast.success('Resume uploaded');
         this.selectedResumeFile = null;
         this.resumeUploading = false;
+        this.cdr.markForCheck();
         const userId = this.auth.getUserId();
         if (userId) this.loadResumes(userId);
       },
       error: (err: any) => {
         this.resumeUploading = false;
+        this.cdr.markForCheck();
         this.toast.error(err?.error?.message || 'Failed to upload resume');
       }
     });

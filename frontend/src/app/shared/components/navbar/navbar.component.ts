@@ -394,7 +394,7 @@ export class NavbarComponent {
         this.showNotifications.set(false);
       },
       error: () => {
-        // Ignore while services are unavailable; polling will refresh state later.
+        // Ignore while services are unavailable; notifications will be reloaded on next poll
       }
     });
   }

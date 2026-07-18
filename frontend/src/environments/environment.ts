@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: ''  // Empty = same-origin; Angular dev proxy or Docker Nginx forwards API calls.
+  apiUrl: 'http://localhost:8080'
 };
