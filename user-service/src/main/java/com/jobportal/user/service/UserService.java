@@ -45,8 +45,8 @@ public class UserService {
 
     public UserResponse register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.getEmail())) {
-            User existing = userRepository.findByEmail(req.getEmail()).get();
-            if (!existing.isEmailVerified()) {
+            User existing = userRepository.findByEmail(req.getEmail()).orElse(null);
+            if (existing != null && !existing.isEmailVerified()) {
                 String otp = generateOtp();
                 existing.setVerificationOtp(passwordEncoder.encode(otp));
                 existing.setVerificationOtpExpiry(LocalDateTime.now().plusMinutes(10));
