@@ -15,7 +15,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -56,23 +55,19 @@ class UserControllerTest {
     }
 
     @Test
-    void login_shouldReturnOkWithToken() throws Exception {
+    void login_shouldReturnOkWithOtpSent() throws Exception {
         LoginRequest req = new LoginRequest();
         req.setEmail("john@example.com");
         req.setPassword("Secret@123");
 
-        Map<String, String> result = new HashMap<>();
-        result.put("token", "fake-jwt");
-        result.put("userId", "user-1");
-
-        when(authService.login(any())).thenReturn(result);
+        when(authService.login(any())).thenReturn("john@example.com");
 
         mockMvc.perform(post("/api/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Authorization", "Bearer fake-jwt"))
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("john@example.com"));
     }
 
     @Test

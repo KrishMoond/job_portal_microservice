@@ -13,10 +13,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +27,7 @@ class AuthServiceTest {
     @Mock UserRepository userRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock JwtUtil jwtUtil;
+    @Mock UserService userService;
     @InjectMocks AuthService authService;
 
     private User user;
@@ -45,16 +48,17 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_success() {
+    void login_success_returnsEmail() {
         when(userRepository.findByEmail(req.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(req.getPassword(), user.getPassword())).thenReturn(true);
-        when(jwtUtil.generateToken("user-1", "RECRUITER")).thenReturn("jwt-token");
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed-otp");
+        doNothing().when(userService).sendLoginOtpEmail(anyString(), anyString());
 
-        Map<String, String> result = authService.login(req);
+        String result = authService.login(req);
 
-        assertThat(result.get("token")).isEqualTo("jwt-token");
-        assertThat(result.get("userId")).isEqualTo("user-1");
-        assertThat(result.get("role")).isEqualTo("RECRUITER");
+        assertThat(result).isEqualTo("john@example.com");
+        verify(userRepository).save(user);
+        verify(userService).sendLoginOtpEmail(eq("john@example.com"), anyString());
     }
 
     @Test
@@ -85,5 +89,57 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(req))
             .isInstanceOf(BadRequestException.class)
             .hasMessage("Please verify your email before logging in");
+    }
+
+    @Test
+    void verifyLoginOtp_success_returnsToken() {
+        user.setVerificationOtp("hashed-otp");
+        user.setVerificationOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        user.setOtpAttempts(0);
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("123456", "hashed-otp")).thenReturn(true);
+        when(jwtUtil.generateToken("user-1", "RECRUITER")).thenReturn("jwt-token");
+
+        var result = authService.verifyLoginOtp("john@example.com", "123456");
+
+        assertThat(result.get("userId")).isEqualTo("user-1");
+        assertThat(result.get("role")).isEqualTo("RECRUITER");
+    }
+
+    @Test
+    void verifyLoginOtp_wrongOtp_throwsBadRequest() {
+        user.setVerificationOtp("hashed-otp");
+        user.setVerificationOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        user.setOtpAttempts(0);
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("000000", "hashed-otp")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.verifyLoginOtp("john@example.com", "000000"))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("Invalid OTP");
+    }
+
+    @Test
+    void verifyLoginOtp_tooManyAttempts_throwsBadRequest() {
+        user.setVerificationOtp("hashed-otp");
+        user.setVerificationOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        user.setOtpAttempts(3);
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.verifyLoginOtp("john@example.com", "123456"))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("Too many failed attempts. Please login again.");
+    }
+
+    @Test
+    void verifyLoginOtp_expired_throwsBadRequest() {
+        user.setVerificationOtp("hashed-otp");
+        user.setVerificationOtpExpiry(LocalDateTime.now().minusMinutes(1));
+        user.setOtpAttempts(0);
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.verifyLoginOtp("john@example.com", "123456"))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessage("OTP has expired. Please login again.");
     }
 }
