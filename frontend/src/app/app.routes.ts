@@ -57,8 +57,8 @@ export const routes: Routes = [
   },
   {
     path: 'seeker/bookmarks',
-    loadComponent: () => import('./features/jobs/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
-    canActivate: [authGuard, roleGuard('JOB_SEEKER')]
+    redirectTo: 'seeker/applications',
+    pathMatch: 'full'
   },
   {
     path: 'seeker/profile',

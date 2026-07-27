@@ -31,7 +31,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${mail.from:noreply@hirehub.com}")
     private String mailFrom;
 
     @Value("${mail.from.name:HireHub No-Reply}")
@@ -80,14 +80,15 @@ public class UserService {
             throw new BadRequestException("No pending OTP for this account");
         if (LocalDateTime.now().isAfter(user.getVerificationOtpExpiry()))
             throw new BadRequestException("OTP has expired. Please request a new OTP");
-        if (user.getOtpAttempts() >= 3) {
-            user.setVerificationOtp(null);
-            user.setVerificationOtpExpiry(null);
-            userRepository.save(user);
-            throw new BadRequestException("Too many failed attempts. Please request a new OTP");
-        }
         if (!passwordEncoder.matches(otp, user.getVerificationOtp())) {
-            user.setOtpAttempts(user.getOtpAttempts() + 1);
+            int attempts = user.getOtpAttempts() + 1;
+            user.setOtpAttempts(attempts);
+            if (attempts >= 3) {
+                user.setVerificationOtp(null);
+                user.setVerificationOtpExpiry(null);
+                userRepository.save(user);
+                throw new BadRequestException("Too many failed attempts. Please request a new OTP");
+            }
             userRepository.save(user);
             throw new BadRequestException("Invalid OTP");
         }

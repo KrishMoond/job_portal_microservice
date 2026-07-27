@@ -48,9 +48,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
         )),
         Map.entry("/api/applications", Map.of(
-            HttpMethod.POST, List.of("JOB_SEEKER"),
-            HttpMethod.PUT,  List.of("RECRUITER", "ADMIN"),
-            HttpMethod.GET,  List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
+            HttpMethod.POST,  List.of("JOB_SEEKER"),
+            HttpMethod.PUT,   List.of("RECRUITER", "ADMIN"),
+            HttpMethod.PATCH, List.of("RECRUITER", "ADMIN"),
+            HttpMethod.GET,   List.of("RECRUITER", "JOB_SEEKER", "ADMIN")
         )),
         Map.entry("/api/resumes", Map.of(
             HttpMethod.POST, List.of("JOB_SEEKER"),
@@ -95,6 +96,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().toString();
         HttpMethod method = exchange.getRequest().getMethod();
+
+        if (HttpMethod.OPTIONS.equals(method)) {
+            return chain.filter(exchange);
+        }
 
         if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
             return chain.filter(exchange);

@@ -22,6 +22,7 @@ public class JobApplication {
 
     private LocalDateTime appliedAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime profileViewedAt;
 
     public enum Status { APPLIED, SHORTLISTED, REJECTED, INTERVIEW_SCHEDULED, HIRED, OFFER_ACCEPTED, OFFER_REJECTED }
 
@@ -58,4 +59,6 @@ public class JobApplication {
     public void setAppliedAt(LocalDateTime appliedAt) { this.appliedAt = appliedAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public LocalDateTime getProfileViewedAt() { return profileViewedAt; }
+    public void setProfileViewedAt(LocalDateTime profileViewedAt) { this.profileViewedAt = profileViewedAt; }
 }

@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
@@ -66,6 +67,22 @@ public class JwtAuthFilterTest {
     }
 
     @Test
+    void shouldAllowCorsPreflightWithoutAuthHeader() {
+        MockServerHttpRequest request = MockServerHttpRequest
+                .method(HttpMethod.OPTIONS, "/api/applications/app-1/view")
+                .header(HttpHeaders.ORIGIN, "http://localhost:4200")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PATCH")
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+
+        Mono<Void> result = jwtAuthFilter.filter(exchange, filterChain);
+
+        StepVerifier.create(result).verifyComplete();
+    }
+
+    @Test
     void shouldRejectWhenNoAuthHeader() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/api/jobs").build();
         ServerWebExchange exchange = MockServerWebExchange.from(request);
@@ -93,6 +110,22 @@ public class JwtAuthFilterTest {
     void shouldAllowValidTokenWithCorrectRole() {
         String token = generateToken("RECRUITER", "123");
         MockServerHttpRequest request = MockServerHttpRequest.post("/api/jobs")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .build();
+        ServerWebExchange exchange = MockServerWebExchange.from(request);
+
+        when(filterChain.filter(any(ServerWebExchange.class))).thenReturn(Mono.empty());
+
+        Mono<Void> result = jwtAuthFilter.filter(exchange, filterChain);
+
+        StepVerifier.create(result).verifyComplete();
+    }
+
+    @Test
+    void shouldAllowRecruiterToMarkProfileViewed() {
+        String token = generateToken("RECRUITER", "rec-1");
+        MockServerHttpRequest request = MockServerHttpRequest
+                .method(HttpMethod.PATCH, "/api/applications/app-1/view")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .build();
         ServerWebExchange exchange = MockServerWebExchange.from(request);

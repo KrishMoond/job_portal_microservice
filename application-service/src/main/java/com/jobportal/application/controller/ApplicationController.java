@@ -64,6 +64,17 @@ public class ApplicationController {
         return ResponseEntity.ok(ApiResponse.success(applicationService.updateStatus(applicationId, req, userId, role), "Status updated"));
     }
 
+    @PatchMapping("/{applicationId}/view")
+    public ResponseEntity<ApiResponse<JobApplication>> markProfileViewed(
+            @PathVariable String applicationId,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String role) {
+        if (!"RECRUITER".equals(role) && !"ADMIN".equals(role))
+            throw new ForbiddenException("Only recruiters can mark profile views");
+        return ResponseEntity.ok(ApiResponse.success(
+            applicationService.markProfileViewed(applicationId, userId, role), "Profile view recorded"));
+    }
+
     @PostMapping("/{applicationId}/offer-response")
     public ResponseEntity<ApiResponse<JobApplication>> respondToOffer(
             @PathVariable String applicationId,

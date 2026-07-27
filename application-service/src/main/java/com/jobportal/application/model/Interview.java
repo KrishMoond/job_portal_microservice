@@ -23,7 +23,9 @@ public class Interview {
     @Column(nullable = false)
     private LocalDateTime scheduledAt;
 
-    private String meetingLink; // e.g., Zoom or Google Meet link
+    private String meetingLink;
+
+    private String googleCalendarEventId;
 
     private String status; // SCHEDULED, COMPLETED, CANCELED
 
@@ -55,6 +57,9 @@ public class Interview {
 
     public String getMeetingLink() { return meetingLink; }
     public void setMeetingLink(String meetingLink) { this.meetingLink = meetingLink; }
+
+    public String getGoogleCalendarEventId() { return googleCalendarEventId; }
+    public void setGoogleCalendarEventId(String googleCalendarEventId) { this.googleCalendarEventId = googleCalendarEventId; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

@@ -199,4 +199,42 @@ class ApplicationServiceTest {
         assertThatThrownBy(() -> applicationService.updateStatus("missing", req, "rec-1", "RECRUITER"))
             .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    @Test
+    void markProfileViewed_ownerWithStoredRecruiter_recordsTimestamp() {
+        savedApp.setRecruiterId("rec-1");
+        when(applicationRepository.findById("app-1")).thenReturn(Optional.of(savedApp));
+        when(applicationRepository.save(savedApp)).thenReturn(savedApp);
+
+        JobApplication result = applicationService.markProfileViewed("app-1", "rec-1", "RECRUITER");
+
+        assertThat(result.getProfileViewedAt()).isNotNull();
+        verify(applicationRepository).save(savedApp);
+        verifyNoInteractions(jobServiceClient);
+    }
+
+    @Test
+    void markProfileViewed_missingRecruiterId_resolvesOwnerAndRecordsTimestamp() {
+        when(applicationRepository.findById("app-1")).thenReturn(Optional.of(savedApp));
+        when(jobServiceClient.getJobById("job-1"))
+            .thenReturn(Map.of("data", Map.of("recruiterId", "rec-1")));
+        when(applicationRepository.save(savedApp)).thenReturn(savedApp);
+
+        JobApplication result = applicationService.markProfileViewed("app-1", "rec-1", "RECRUITER");
+
+        assertThat(result.getRecruiterId()).isEqualTo("rec-1");
+        assertThat(result.getProfileViewedAt()).isNotNull();
+        verify(applicationRepository).save(savedApp);
+    }
+
+    @Test
+    void markProfileViewed_wrongRecruiter_throwsForbidden() {
+        savedApp.setRecruiterId("rec-1");
+        when(applicationRepository.findById("app-1")).thenReturn(Optional.of(savedApp));
+
+        assertThatThrownBy(() -> applicationService.markProfileViewed("app-1", "other-rec", "RECRUITER"))
+            .isInstanceOf(ForbiddenException.class);
+
+        verify(applicationRepository, never()).save(any());
+    }
 }

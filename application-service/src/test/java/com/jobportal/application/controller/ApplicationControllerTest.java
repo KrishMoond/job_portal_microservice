@@ -152,6 +152,28 @@ class ApplicationControllerTest {
     }
 
     @Test
+    void markProfileViewed_recruiter_shouldReturnOk() throws Exception {
+        savedApp.setProfileViewedAt(LocalDateTime.now());
+        when(applicationService.markProfileViewed(eq("app-1"), eq("rec-1"), eq("RECRUITER")))
+                .thenReturn(savedApp);
+
+        mockMvc.perform(patch("/api/applications/app-1/view")
+                .header("X-User-Id", "rec-1")
+                .header("X-User-Role", "RECRUITER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Profile view recorded"))
+                .andExpect(jsonPath("$.data.profileViewedAt").exists());
+    }
+
+    @Test
+    void markProfileViewed_jobSeeker_shouldReturnForbidden() throws Exception {
+        mockMvc.perform(patch("/api/applications/app-1/view")
+                .header("X-User-Id", "cand-1")
+                .header("X-User-Role", "JOB_SEEKER"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void respondToOffer_jobSeeker_shouldReturnOk() throws Exception {
         when(applicationService.respondToOffer(eq("app-1"), eq(true), eq("cand-1"), eq("JOB_SEEKER")))
                 .thenReturn(savedApp);

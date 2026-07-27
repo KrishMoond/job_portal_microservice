@@ -54,6 +54,8 @@ export interface Application {
   resumeId: string;
   status: 'APPLIED' | 'SHORTLISTED' | 'REJECTED' | 'INTERVIEW_SCHEDULED' | 'HIRED' | 'OFFER_ACCEPTED' | 'OFFER_REJECTED';
   appliedAt: string;
+  updatedAt: string;
+  profileViewedAt: string | null;
 }
 
 export interface Notification {

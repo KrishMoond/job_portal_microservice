@@ -1,15 +1,18 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { Application, Interview } from '../../../shared/models/models';
+import { Application, Interview, Job } from '../../../shared/models/models';
 import { LucideAngularModule } from 'lucide-angular';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 interface EnrichedApplication extends Application { company: string; }
+type Tab = 'saved' | 'applied' | 'interviews' | 'archived';
+
+const ARCHIVED_STATUSES = new Set(['REJECTED', 'OFFER_REJECTED', 'OFFER_ACCEPTED']);
 
 @Component({
   selector: 'app-my-applications',
@@ -17,188 +20,230 @@ interface EnrichedApplication extends Application { company: string; }
   imports: [CommonModule, LucideAngularModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="min-h-screen bg-gray-50 flex flex-col pt-6">
-      <div class="max-w-7xl mx-auto px-6 w-full flex-grow grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8">
+    <div class="min-h-screen bg-gray-50">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-        <!-- Sidebar -->
-        <aside class="space-y-1">
-          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Dashboard</h3>
-          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary-light text-primary relative">
-            <lucide-icon name="file-text" class="w-4 h-4"></lucide-icon>
-            My Applications
-            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-md"></span>
-          </a>
-          <a routerLink="/seeker/bookmarks" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-            <lucide-icon name="bookmark" class="w-4 h-4"></lucide-icon>
-            Saved Jobs
-          </a>
-          <a routerLink="/seeker/profile" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-            <lucide-icon name="user" class="w-4 h-4"></lucide-icon>
-            Resume / Profile
-          </a>
-        </aside>
+        <!-- Page Header -->
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-gray-900">My Jobs</h1>
+          <p class="text-sm text-gray-500 mt-1">Track your saved jobs, applications, interviews and history.</p>
+        </div>
 
-        <!-- Main Content -->
-        <main>
-          <div class="flex items-center justify-between mb-8">
-            <div>
-              <h1 class="text-2xl font-bold text-gray-900">My Applications</h1>
-              <p class="text-sm text-gray-500 mt-1">Track and manage your submitted job applications.</p>
-            </div>
-            <span class="text-sm text-gray-400">{{ applications().length }} total</span>
-          </div>
+        <!-- Tab Bar -->
+        <div class="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm mb-6 w-fit">
+          @for (tab of tabs; track tab.key) {
+            <button
+              (click)="setTab(tab.key)"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              [class]="activeTab() === tab.key
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'">
+              <lucide-icon [name]="tab.icon" class="w-4 h-4"></lucide-icon>
+              {{ tab.label }}
+              <span class="text-xs px-1.5 py-0.5 rounded-full font-bold"
+                [class]="activeTab() === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'">
+                {{ tabCount(tab.key) }}
+              </span>
+            </button>
+          }
+        </div>
 
-          <!-- Interviews -->
-          <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-6">
-            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 class="text-sm font-bold text-gray-900">My Interviews</h2>
-                <p class="text-xs text-gray-500 mt-0.5">Upcoming interviews scheduled by recruiters.</p>
-              </div>
-              @if (interviewsLoading()) {
-                <span class="text-xs text-gray-400">Loading...</span>
-              } @else {
-                <span class="text-xs text-gray-400">{{ interviews().length }} total</span>
-              }
-            </div>
-
-            @if (interviewsLoading()) {
-              <div class="p-6 space-y-3 animate-pulse">
-                @for (sk of [1,2]; track sk) {
-                  <div class="h-12 bg-gray-100 rounded-xl"></div>
-                }
-              </div>
-            } @else if (interviews().length === 0) {
-              <div class="p-6 text-sm text-gray-500">No interviews scheduled yet.</div>
-            } @else {
-              <div class="divide-y divide-gray-100">
-                @for (iv of interviews(); track iv.id) {
-                  <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div class="flex items-start gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/10">
-                        <lucide-icon name="calendar" class="w-5 h-5"></lucide-icon>
-                      </div>
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">{{ iv.status || 'SCHEDULED' }}</p>
-                        <p class="text-xs text-gray-500 mt-1">
-                          Scheduled for <span class="font-semibold text-gray-700">{{ iv.scheduledAt | date:'medium' }}</span>
-                        </p>
-                        @if (iv.meetingLink) {
-                          <a [href]="iv.meetingLink" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-primary hover:underline mt-1 inline-block">
-                            Join meeting
-                          </a>
-                        }
-                      </div>
+        <!-- SAVED TAB -->
+        @if (activeTab() === 'saved') {
+          @if (savedLoading()) {
+            <ng-container *ngTemplateOutlet="skeletonList"></ng-container>
+          } @else if (savedJobs().length === 0) {
+            <ng-container *ngTemplateOutlet="emptyState; context: { icon: 'bookmark', title: 'No saved jobs', desc: 'Bookmark jobs you like to revisit them here.', link: '/jobs', linkLabel: 'Browse Jobs' }"></ng-container>
+          } @else {
+            <div class="space-y-3">
+              @for (job of savedJobs(); track job.jobId) {
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-shadow">
+                  <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-gray-400 text-sm flex-shrink-0">
+                      {{ (job.company || job.title).substring(0,2).toUpperCase() }}
                     </div>
-                    <div class="text-xs text-gray-500 sm:text-right">
-                      {{ iv.status || 'SCHEDULED' }}
+                    <div>
+                      <a [routerLink]="['/jobs', job.jobId]" class="font-semibold text-gray-900 hover:text-primary transition-colors">{{ job.title }}</a>
+                      <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                        <span>{{ job.company }}</span>
+                        <span>·</span>
+                        <span>{{ job.location }}</span>
+                        @if (job.salary) { <span>·</span> <span class="text-green-600 font-semibold">{{ job.salary }}</span> }
+                      </p>
                     </div>
                   </div>
-                }
-              </div>
-            }
-          </div>
-
-          <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-            @if (loading()) {
-              <div class="overflow-hidden">
-                <table class="w-full text-left text-sm whitespace-nowrap">
-                  <thead class="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th class="px-6 py-4"><div class="h-4 bg-gray-300 rounded w-20 animate-pulse"></div></th>
-                      <th class="px-6 py-4"><div class="h-4 bg-gray-300 rounded w-24 animate-pulse"></div></th>
-                      <th class="px-6 py-4"><div class="h-4 bg-gray-300 rounded w-24 animate-pulse"></div></th>
-                      <th class="px-6 py-4"><div class="h-4 bg-gray-300 rounded w-16 animate-pulse"></div></th>
-                      <th class="px-6 py-4 text-right"><div class="h-4 bg-gray-300 rounded w-10 ml-auto animate-pulse"></div></th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    @for (sk of [1,2,3,4,5]; track sk) {
-                      <tr class="animate-pulse">
-                        <td class="px-6 py-4">
-                          <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-gray-200"></div>
-                            <div class="h-4 bg-gray-200 rounded w-24"></div>
-                          </div>
-                        </td>
-                        <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded w-32"></div></td>
-                        <td class="px-6 py-4"><div class="h-4 bg-gray-200 rounded w-24"></div></td>
-                        <td class="px-6 py-4"><div class="h-6 bg-gray-200 rounded-full w-20"></div></td>
-                        <td class="px-6 py-4 text-right"><div class="h-4 bg-gray-200 rounded w-6 ml-auto"></div></td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            } @else if (applications().length === 0) {
-              <div class="text-center py-20">
-                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 text-gray-300">
-                  <lucide-icon name="file-x-2" class="w-8 h-8"></lucide-icon>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs px-2 py-1 rounded-full font-semibold"
+                      [class]="job.status === 'OPEN' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'">
+                      {{ job.status }}
+                    </span>
+                    <a [routerLink]="['/jobs', job.jobId]"
+                      class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/5 text-primary hover:bg-primary/10 transition-colors">
+                      Apply
+                    </a>
+                    <button (click)="removeBookmark(job.jobId)"
+                      class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Remove">
+                      <lucide-icon name="bookmark-minus" class="w-4 h-4"></lucide-icon>
+                    </button>
+                  </div>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-1">No applications yet</h3>
-                <p class="text-gray-500 text-sm mb-6">You haven't applied to any jobs. Start exploring opportunities!</p>
-                <a routerLink="/jobs" class="btn-primary py-2 px-6">Find Jobs</a>
-              </div>
-            } @else {
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm whitespace-nowrap">
-                  <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
-                    <tr>
-                      <th class="px-6 py-4">Company</th>
-                      <th class="px-6 py-4">Role</th>
-                      <th class="px-6 py-4">Date Applied</th>
-                      <th class="px-6 py-4">Status</th>
-                      <th class="px-6 py-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100">
-                    @for (app of applications(); track app.id) {
-                      <tr class="hover:bg-gray-50/50 transition-colors group">
-                        <td class="px-6 py-4">
-                          <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg border border-gray-100 bg-white shadow-sm flex items-center justify-center font-bold text-gray-400 text-sm">
-                              {{ (app.company || app.jobTitle).substring(0,2).toUpperCase() }}
-                            </div>
-                            <span class="font-semibold text-gray-900">{{ app.company || '—' }}</span>
-                          </div>
-                        </td>
-                        <td class="px-6 py-4">
-                          <a [routerLink]="['/jobs', app.jobId]" class="font-medium text-gray-900 hover:text-primary transition-colors">{{ app.jobTitle }}</a>
-                        </td>
-                        <td class="px-6 py-4 text-gray-500">{{ app.appliedAt | date:'mediumDate' }}</td>
-                        <td class="px-6 py-4">
-                          <span class="badge" [ngClass]="statusClass(app.status)">{{ formatStatus(app.status) }}</span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                          <div class="flex justify-end items-center gap-2">
-                            @if (app.status === 'HIRED') {
-                              <button (click)="respondToOffer(app.id, true)" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">
-                                Accept
-                              </button>
-                              <button (click)="respondToOffer(app.id, false)" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors">
-                                Reject
-                              </button>
-                            }
-                            <a [routerLink]="['/jobs', app.jobId]"
-                              class="p-2 text-gray-400 hover:text-primary hover:bg-primary-light rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none inline-flex"
-                              title="View Job">
-                              <lucide-icon name="external-link" class="w-4 h-4"></lucide-icon>
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
+              }
+            </div>
+          }
+        }
+
+        <!-- APPLIED TAB -->
+        @if (activeTab() === 'applied') {
+          @if (appsLoading()) {
+            <ng-container *ngTemplateOutlet="skeletonList"></ng-container>
+          } @else if (activeApplications().length === 0) {
+            <ng-container *ngTemplateOutlet="emptyState; context: { icon: 'file-text', title: 'No active applications', desc: 'Jobs you apply to will appear here.', link: '/jobs', linkLabel: 'Find Jobs' }"></ng-container>
+          } @else {
+            <div class="space-y-3">
+              @for (app of activeApplications(); track app.id) {
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                      <div class="w-11 h-11 rounded-xl border border-gray-100 bg-white shadow-sm flex items-center justify-center font-bold text-gray-400 text-sm flex-shrink-0">
+                        {{ (app.company || app.jobTitle).substring(0,2).toUpperCase() }}
+                      </div>
+                      <div>
+                        <a [routerLink]="['/jobs', app.jobId]" class="font-semibold text-gray-900 hover:text-primary transition-colors">{{ app.jobTitle }}</a>
+                        <p class="text-xs text-gray-500 mt-0.5">{{ app.company || '—' }} · Applied {{ app.appliedAt | date:'mediumDate' }}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="badge" [ngClass]="statusClass(app.status)">{{ formatStatus(app.status) }}</span>
+                      @if (app.status === 'HIRED') {
+                        <button (click)="respondToOffer(app.id, true)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors">Accept Offer</button>
+                        <button (click)="respondToOffer(app.id, false)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors">Decline</button>
+                      }
+                    </div>
+                  </div>
+                  <!-- Activity strip -->
+                  <div class="px-5 pb-4 pt-0 flex items-center gap-6 border-t border-gray-50">
+                    <div class="flex items-center gap-1.5 text-xs text-gray-400">
+                      <lucide-icon name="send" class="w-3.5 h-3.5 text-primary"></lucide-icon>
+                      <span>Submitted {{ app.appliedAt | date:'shortDate' }}</span>
+                    </div>
+                    @if (app.profileViewedAt) {
+                      <div class="flex items-center gap-1.5 text-xs text-indigo-600 font-semibold">
+                        <lucide-icon name="eye" class="w-3.5 h-3.5"></lucide-icon>
+                        <span>Profile viewed {{ app.profileViewedAt | date:'shortDate' }}</span>
+                      </div>
+                    } @else {
+                      <div class="flex items-center gap-1.5 text-xs text-gray-300">
+                        <lucide-icon name="eye-off" class="w-3.5 h-3.5"></lucide-icon>
+                        <span>Not yet viewed</span>
+                      </div>
                     }
-                  </tbody>
-                </table>
-              </div>
-              <div class="px-6 py-4 border-t border-gray-200 text-sm text-gray-500">
-                Showing {{ applications().length }} result{{ applications().length === 1 ? '' : 's' }}
-              </div>
-            }
-          </div>
-        </main>
+                    @if (app.status !== 'APPLIED') {
+                      <div class="flex items-center gap-1.5 text-xs font-semibold" [class]="latestActionTextClass(app.status)">
+                        <lucide-icon [name]="latestActionIcon(app.status)" class="w-3.5 h-3.5"></lucide-icon>
+                        <span>{{ latestActionLabel(app.status) }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- INTERVIEWS TAB -->
+        @if (activeTab() === 'interviews') {
+          @if (interviewsLoading()) {
+            <ng-container *ngTemplateOutlet="skeletonList"></ng-container>
+          } @else if (interviews().length === 0) {
+            <ng-container *ngTemplateOutlet="emptyState; context: { icon: 'calendar', title: 'No interviews yet', desc: 'Interviews scheduled by recruiters will appear here.', link: null, linkLabel: null }"></ng-container>
+          } @else {
+            <div class="space-y-3">
+              @for (iv of interviews(); track iv.id) {
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-shadow">
+                  <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                      [class]="iv.status === 'CANCELED' ? 'bg-red-50 text-red-400' : iv.status === 'COMPLETED' ? 'bg-green-50 text-green-500' : 'bg-blue-50 text-blue-500'">
+                      <lucide-icon name="calendar" class="w-5 h-5"></lucide-icon>
+                    </div>
+                    <div>
+                      <p class="font-semibold text-gray-900">{{ iv.scheduledAt | date:'EEEE, MMMM d, y' }}</p>
+                      <p class="text-xs text-gray-500 mt-0.5">{{ iv.scheduledAt | date:'h:mm a' }}</p>
+                      @if (iv.meetingLink) {
+                        <a [href]="iv.meetingLink" target="_blank" rel="noopener noreferrer"
+                          class="text-xs font-bold text-primary hover:underline mt-1 inline-flex items-center gap-1">
+                          <lucide-icon name="video" class="w-3 h-3"></lucide-icon> Join Meeting
+                        </a>
+                      }
+                    </div>
+                  </div>
+                  <span class="text-xs px-3 py-1.5 rounded-full font-semibold self-start sm:self-auto"
+                    [class]="iv.status === 'CANCELED' ? 'bg-red-50 text-red-600' : iv.status === 'COMPLETED' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'">
+                    {{ iv.status || 'SCHEDULED' }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- ARCHIVED TAB -->
+        @if (activeTab() === 'archived') {
+          @if (appsLoading()) {
+            <ng-container *ngTemplateOutlet="skeletonList"></ng-container>
+          } @else if (archivedApplications().length === 0) {
+            <ng-container *ngTemplateOutlet="emptyState; context: { icon: 'archive', title: 'Nothing archived yet', desc: 'Closed applications (rejected, accepted offers) will appear here.', link: null, linkLabel: null }"></ng-container>
+          } @else {
+            <div class="space-y-3">
+              @for (app of archivedApplications(); track app.id) {
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                  <div class="flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-xl border border-gray-100 bg-gray-50 flex items-center justify-center font-bold text-gray-300 text-sm flex-shrink-0">
+                      {{ (app.company || app.jobTitle).substring(0,2).toUpperCase() }}
+                    </div>
+                    <div>
+                      <a [routerLink]="['/jobs', app.jobId]" class="font-semibold text-gray-700 hover:text-primary transition-colors">{{ app.jobTitle }}</a>
+                      <p class="text-xs text-gray-400 mt-0.5">{{ app.company || '—' }} · Applied {{ app.appliedAt | date:'mediumDate' }}</p>
+                    </div>
+                  </div>
+                  <span class="badge" [ngClass]="statusClass(app.status)">{{ formatStatus(app.status) }}</span>
+                </div>
+              }
+            </div>
+          }
+        }
+
       </div>
     </div>
+
+    <!-- Skeleton template -->
+    <ng-template #skeletonList>
+      <div class="space-y-3 animate-pulse">
+        @for (sk of [1,2,3]; track sk) {
+          <div class="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+            <div class="w-11 h-11 rounded-xl bg-gray-100 flex-shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-gray-100 rounded w-48"></div>
+              <div class="h-3 bg-gray-100 rounded w-32"></div>
+            </div>
+            <div class="h-6 bg-gray-100 rounded-full w-20"></div>
+          </div>
+        }
+      </div>
+    </ng-template>
+
+    <!-- Empty state template -->
+    <ng-template #emptyState let-icon="icon" let-title="title" let-desc="desc" let-link="link" let-linkLabel="linkLabel">
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm text-center py-20">
+        <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 text-gray-300">
+          <lucide-icon [name]="icon" class="w-7 h-7"></lucide-icon>
+        </div>
+        <h3 class="text-base font-semibold text-gray-900 mb-1">{{ title }}</h3>
+        <p class="text-gray-500 text-sm mb-6">{{ desc }}</p>
+        @if (link) {
+          <a [routerLink]="link" class="btn-primary py-2 px-6 text-sm">{{ linkLabel }}</a>
+        }
+      </div>
+    </ng-template>
   `
 })
 export class MyApplicationsComponent implements OnInit {
@@ -206,42 +251,81 @@ export class MyApplicationsComponent implements OnInit {
   private auth  = inject(AuthService);
   private toast = inject(ToastService);
 
-  applications = signal<EnrichedApplication[]>([]);
-  loading = signal(false);
-  readonly interviews = signal<Interview[]>([]);
-  readonly interviewsLoading = signal(false);
+  activeTab       = signal<Tab>('applied');
+  appsLoading     = signal(false);
+  savedLoading    = signal(false);
+  interviewsLoading = signal(false);
+
+  allApplications = signal<EnrichedApplication[]>([]);
+  savedJobs       = signal<Job[]>([]);
+  interviews      = signal<Interview[]>([]);
+
+  readonly activeApplications = computed(() =>
+    this.allApplications().filter(a => !ARCHIVED_STATUSES.has(a.status))
+  );
+  readonly archivedApplications = computed(() =>
+    this.allApplications().filter(a => ARCHIVED_STATUSES.has(a.status))
+  );
+
+  readonly tabs = [
+    { key: 'saved'      as Tab, label: 'Saved',      icon: 'bookmark'   },
+    { key: 'applied'    as Tab, label: 'Applied',     icon: 'file-text'  },
+    { key: 'interviews' as Tab, label: 'Interviews',  icon: 'calendar'   },
+    { key: 'archived'   as Tab, label: 'Archived',    icon: 'archive'    },
+  ];
+
+  tabCount(tab: Tab): number {
+    switch (tab) {
+      case 'saved':       return this.savedJobs().length;
+      case 'applied':     return this.activeApplications().length;
+      case 'interviews':  return this.interviews().length;
+      case 'archived':    return this.archivedApplications().length;
+    }
+  }
 
   ngOnInit(): void {
     const user = this.auth.getCurrentUser();
     if (!user) return;
-    this.loading.set(true);
-
+    this.loadApplications(user.userId);
+    this.loadSaved();
     this.loadInterviews();
+  }
 
-    this.api.getMyApplications(user.userId).subscribe({
+  setTab(tab: Tab): void { this.activeTab.set(tab); }
+
+  private loadApplications(userId: string): void {
+    this.appsLoading.set(true);
+    this.api.getMyApplications(userId).subscribe({
       next: (res) => {
-        const apps = (res.data ?? []).map(a => this.normalizeApplication(a));
-        this.applications.set(apps.map(a => ({ ...a, company: '' })));
-        this.loading.set(false);
-
-        if (apps.length === 0) return;
-        const jobRequests = apps.map(app =>
+        const apps = (res.data ?? []).map(a => this.normalizeApp(a));
+        this.allApplications.set(apps.map(a => ({ ...a, company: '' })));
+        this.appsLoading.set(false);
+        if (!apps.length) return;
+        forkJoin(apps.map(app =>
           this.api.getJobById(app.jobId).pipe(
             map(r => ({ ...app, company: r.data?.company ?? '' } as EnrichedApplication)),
             catchError(() => of({ ...app, company: '' } as EnrichedApplication))
           )
-        );
+        )).subscribe({ next: enriched => this.allApplications.set(enriched) });
+      },
+      error: () => { this.appsLoading.set(false); this.toast.error('Failed to load applications'); }
+    });
+  }
 
-        forkJoin(jobRequests).subscribe({
-          next: (enriched) => { this.applications.set(enriched); },
-          error: () => { /* keep fallback list */ }
+  private loadSaved(): void {
+    this.savedLoading.set(true);
+    this.api.getBookmarks().subscribe({
+      next: (res: any) => {
+        const bookmarks = Array.isArray(res) ? res : (res.data || []);
+        if (!bookmarks.length) { this.savedJobs.set([]); this.savedLoading.set(false); return; }
+        forkJoin(bookmarks.map((b: any) =>
+          this.api.getJobById(b.jobId || b.id).pipe(map(r => r.data as Job), catchError(() => of(null)))
+        )).subscribe({
+          next: (jobs: any) => { this.savedJobs.set(jobs.filter(Boolean)); this.savedLoading.set(false); },
+          error: () => { this.savedJobs.set([]); this.savedLoading.set(false); }
         });
       },
-      error: () => {
-        this.applications.set([]);
-        this.loading.set(false);
-        this.toast.error('Failed to load applications');
-      }
+      error: () => { this.savedJobs.set([]); this.savedLoading.set(false); }
     });
   }
 
@@ -253,49 +337,81 @@ export class MyApplicationsComponent implements OnInit {
         this.interviews.set(list as Interview[]);
         this.interviewsLoading.set(false);
       },
-      error: () => {
-        this.interviews.set([]);
-        this.interviewsLoading.set(false);
-      }
+      error: () => { this.interviews.set([]); this.interviewsLoading.set(false); }
     });
   }
 
-  private normalizeApplication(app: Application): Application {
-    const appliedAtAny = (app as any).appliedAt;
-    if (Array.isArray(appliedAtAny) && appliedAtAny.length >= 3) {
-      const [year, month, day, hour = 0, minute = 0, second = 0] = appliedAtAny;
-      const normalized = new Date(year, month - 1, day, hour, minute, second).toISOString();
-      return { ...app, appliedAt: normalized };
-    }
-    return app;
+  removeBookmark(jobId: string): void {
+    this.api.removeBookmark(jobId).subscribe({
+      next: () => { this.savedJobs.update(jobs => jobs.filter(j => (j.jobId || (j as any).id) !== jobId)); this.toast.success('Removed from saved jobs'); },
+      error: () => this.toast.error('Failed to remove bookmark')
+    });
   }
-
-  formatStatus(status: string): string { return status.replace(/_/g, ' '); }
 
   respondToOffer(applicationId: string, accepted: boolean): void {
     this.api.respondToOffer(applicationId, accepted).subscribe({
       next: () => {
-        this.applications.update(apps => apps.map(app =>
-          app.id === applicationId
-            ? { ...app, status: accepted ? 'OFFER_ACCEPTED' : 'OFFER_REJECTED' }
-            : app
+        this.allApplications.update(apps => apps.map(a =>
+          a.id === applicationId ? { ...a, status: accepted ? 'OFFER_ACCEPTED' : 'OFFER_REJECTED' } : a
         ));
-        this.toast.success(accepted ? 'Offer accepted' : 'Offer rejected');
+        this.toast.success(accepted ? 'Offer accepted!' : 'Offer declined');
       },
-      error: () => this.toast.error('Failed to submit offer response')
+      error: () => this.toast.error('Failed to submit response')
     });
   }
 
+  private normalizeApp(app: Application): Application {
+    const norm = (v: any): any => {
+      if (!v) return v;
+      if (Array.isArray(v) && v.length >= 3) {
+        const [y, m, d, h = 0, min = 0, s = 0] = v;
+        return new Date(y, m - 1, d, h, min, s).toISOString();
+      }
+      return v;
+    };
+    return { ...app, appliedAt: norm((app as any).appliedAt), updatedAt: norm((app as any).updatedAt), profileViewedAt: norm((app as any).profileViewedAt) };
+  }
+
+  formatStatus(s: string): string { return s.replace(/_/g, ' '); }
+
   statusClass(status: string): string {
     switch (status) {
-      case 'APPLIED':
-      case 'SHORTLISTED':
-      case 'INTERVIEW_SCHEDULED': return 'badge-pending';
-      case 'HIRED':               return 'badge-accepted';
-      case 'OFFER_ACCEPTED':      return 'badge-accepted';
-      case 'REJECTED':            return 'badge-rejected';
-      case 'OFFER_REJECTED':      return 'badge-rejected';
-      default:                    return 'bg-gray-100 text-gray-700';
+      case 'APPLIED': case 'SHORTLISTED': case 'INTERVIEW_SCHEDULED': return 'badge-pending';
+      case 'HIRED': case 'OFFER_ACCEPTED': return 'badge-accepted';
+      case 'REJECTED': case 'OFFER_REJECTED': return 'badge-rejected';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  }
+
+  latestActionIcon(status: string): string {
+    switch (status) {
+      case 'SHORTLISTED': return 'star';
+      case 'INTERVIEW_SCHEDULED': return 'calendar';
+      case 'HIRED': case 'OFFER_ACCEPTED': return 'check-circle';
+      case 'REJECTED': case 'OFFER_REJECTED': return 'x-circle';
+      default: return 'clock';
+    }
+  }
+
+  latestActionTextClass(status: string): string {
+    switch (status) {
+      case 'SHORTLISTED': return 'text-yellow-600';
+      case 'INTERVIEW_SCHEDULED': return 'text-blue-600';
+      case 'HIRED': case 'OFFER_ACCEPTED': return 'text-green-600';
+      case 'REJECTED': case 'OFFER_REJECTED': return 'text-red-500';
+      default: return 'text-gray-400';
+    }
+  }
+
+  latestActionLabel(status: string): string {
+    switch (status) {
+      case 'SHORTLISTED': return 'Shortlisted';
+      case 'INTERVIEW_SCHEDULED': return 'Interview Scheduled';
+      case 'HIRED': return 'Offer Extended';
+      case 'OFFER_ACCEPTED': return 'Offer Accepted';
+      case 'OFFER_REJECTED': return 'Offer Declined';
+      case 'REJECTED': return 'Not Selected';
+      default: return status.replace(/_/g, ' ');
     }
   }
 }

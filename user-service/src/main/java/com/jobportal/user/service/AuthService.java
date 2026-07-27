@@ -50,14 +50,15 @@ public class AuthService {
             throw new BadRequestException("No pending OTP. Please login again.");
         if (LocalDateTime.now().isAfter(user.getVerificationOtpExpiry()))
             throw new BadRequestException("OTP has expired. Please login again.");
-        if (user.getOtpAttempts() >= 3) {
-            user.setVerificationOtp(null);
-            user.setVerificationOtpExpiry(null);
-            userRepository.save(user);
-            throw new BadRequestException("Too many failed attempts. Please login again.");
-        }
         if (!passwordEncoder.matches(otp, user.getVerificationOtp())) {
-            user.setOtpAttempts(user.getOtpAttempts() + 1);
+            int attempts = user.getOtpAttempts() + 1;
+            user.setOtpAttempts(attempts);
+            if (attempts >= 3) {
+                user.setVerificationOtp(null);
+                user.setVerificationOtpExpiry(null);
+                userRepository.save(user);
+                throw new BadRequestException("Too many failed attempts. Please login again.");
+            }
             userRepository.save(user);
             throw new BadRequestException("Invalid OTP");
         }

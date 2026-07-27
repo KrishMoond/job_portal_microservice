@@ -18,8 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ApplicationService {
@@ -149,9 +151,27 @@ public class ApplicationService {
         return applicationRepository.findByCandidateId(candidateId);
     }
 
+    private static final Map<JobApplication.Status, Set<JobApplication.Status>> ALLOWED_TRANSITIONS = Map.of(
+        JobApplication.Status.APPLIED,              EnumSet.of(JobApplication.Status.SHORTLISTED, JobApplication.Status.REJECTED),
+        JobApplication.Status.SHORTLISTED,          EnumSet.of(JobApplication.Status.INTERVIEW_SCHEDULED, JobApplication.Status.REJECTED),
+        JobApplication.Status.INTERVIEW_SCHEDULED,  EnumSet.of(JobApplication.Status.HIRED, JobApplication.Status.REJECTED, JobApplication.Status.SHORTLISTED),
+        JobApplication.Status.HIRED,                EnumSet.noneOf(JobApplication.Status.class),
+        JobApplication.Status.REJECTED,             EnumSet.noneOf(JobApplication.Status.class),
+        JobApplication.Status.OFFER_ACCEPTED,       EnumSet.noneOf(JobApplication.Status.class),
+        JobApplication.Status.OFFER_REJECTED,       EnumSet.noneOf(JobApplication.Status.class)
+    );
+
     public JobApplication updateStatus(String applicationId, StatusUpdateRequest req, String requesterId, String role) {
         JobApplication app = applicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
+
+        if (app.getStatus() == req.getStatus())
+            throw new BadRequestException("Application is already in status: " + req.getStatus());
+
+        Set<JobApplication.Status> allowed = ALLOWED_TRANSITIONS.getOrDefault(app.getStatus(), EnumSet.noneOf(JobApplication.Status.class));
+        if (!allowed.contains(req.getStatus()))
+            throw new BadRequestException("Cannot transition from " + app.getStatus() + " to " + req.getStatus());
+
         if (!"ADMIN".equals(role)) {
             // Prefer stored recruiterId (avoid job-service call)
             if (app.getRecruiterId() != null && !app.getRecruiterId().isBlank()) {
@@ -179,6 +199,40 @@ public class ApplicationService {
             app.getId(), app.getJobId(), app.getJobTitle(),
             app.getCandidateId(), app.getCandidateEmail(),
             req.getStatus().name(), app.getRecruiterId()));
+        return app;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    @SuppressWarnings("unchecked")
+    public JobApplication markProfileViewed(String applicationId, String recruiterId, String role) {
+        JobApplication app = applicationRepository.findById(applicationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Application not found: " + applicationId));
+        boolean changed = false;
+        if (!"ADMIN".equals(role)) {
+            if (app.getRecruiterId() != null && !app.getRecruiterId().isBlank()) {
+                if (!recruiterId.equals(app.getRecruiterId()))
+                    throw new ForbiddenException("You can only view profiles for your own job applications");
+            } else {
+                Map<String, Object> jobData;
+                try {
+                    Map<String, Object> jobResp = jobServiceClient.getJobById(app.getJobId());
+                    jobData = (Map<String, Object>) jobResp.get("data");
+                } catch (Exception e) {
+                    throw new ResourceNotFoundException("Job not found or job-service unavailable: " + app.getJobId());
+                }
+                if (jobData == null) throw new ResourceNotFoundException("Job not found: " + app.getJobId());
+                String ownerRecruiterId = (String) jobData.get("recruiterId");
+                if (!recruiterId.equals(ownerRecruiterId))
+                    throw new ForbiddenException("You can only view profiles for your own job applications");
+                app.setRecruiterId(ownerRecruiterId);
+                changed = true;
+            }
+        }
+        if (app.getProfileViewedAt() == null) {
+            app.setProfileViewedAt(java.time.LocalDateTime.now());
+            changed = true;
+        }
+        if (changed) app = applicationRepository.save(app);
         return app;
     }
 

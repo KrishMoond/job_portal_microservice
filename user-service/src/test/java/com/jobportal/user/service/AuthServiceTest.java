@@ -123,10 +123,11 @@ class AuthServiceTest {
     void verifyLoginOtp_tooManyAttempts_throwsBadRequest() {
         user.setVerificationOtp("hashed-otp");
         user.setVerificationOtpExpiry(LocalDateTime.now().plusMinutes(5));
-        user.setOtpAttempts(3);
+        user.setOtpAttempts(2);
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("000000", "hashed-otp")).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.verifyLoginOtp("john@example.com", "123456"))
+        assertThatThrownBy(() -> authService.verifyLoginOtp("john@example.com", "000000"))
             .isInstanceOf(BadRequestException.class)
             .hasMessage("Too many failed attempts. Please login again.");
     }

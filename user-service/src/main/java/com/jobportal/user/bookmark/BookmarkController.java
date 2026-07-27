@@ -45,4 +45,7 @@ public class BookmarkController {
             @RequestHeader(value = "X-User-Id", required = false, defaultValue = "") String userId) {
         return ResponseEntity.ok(bookmarkRepository.findByUserId(userId));
     }
+    
+    
+    
 }

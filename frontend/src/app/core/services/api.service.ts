@@ -47,6 +47,16 @@ export class ApiService {
     return { ...i, scheduledAt } as Interview;
   }
 
+  private normalizeApplication(app: any): Application {
+    if (!app) return app;
+    return {
+      ...app,
+      appliedAt: this.normalizeDate(app.appliedAt),
+      updatedAt: this.normalizeDate(app.updatedAt),
+      profileViewedAt: this.normalizeDate(app.profileViewedAt)
+    } as Application;
+  }
+
   // Jobs
   getJobs(): Observable<ApiResponse<Job[]>> {
     return this.http.get<ApiResponse<Job[]>>(`${this.api}/api/jobs`).pipe(
@@ -113,19 +123,39 @@ export class ApiService {
   }
 
   getMyApplications(candidateId: string): Observable<ApiResponse<Application[]>> {
-    return this.http.get<ApiResponse<Application[]>>(`${this.api}/api/applications/candidate/${candidateId}`);
+    return this.http.get<ApiResponse<Application[]>>(`${this.api}/api/applications/candidate/${candidateId}`).pipe(
+      map(res => ({
+        ...res,
+        data: Array.isArray(res.data) ? res.data.map(app => this.normalizeApplication(app)) : res.data
+      }))
+    );
   }
 
   getJobApplications(jobId: string): Observable<ApiResponse<Application[]>> {
-    return this.http.get<ApiResponse<Application[]>>(`${this.api}/api/applications/job/${jobId}`);
+    return this.http.get<ApiResponse<Application[]>>(`${this.api}/api/applications/job/${jobId}`).pipe(
+      map(res => ({
+        ...res,
+        data: Array.isArray(res.data) ? res.data.map(app => this.normalizeApplication(app)) : res.data
+      }))
+    );
   }
 
-  updateApplicationStatus(appId: string, status: string): Observable<any> {
-    return this.http.put(`${this.api}/api/applications/${appId}/status`, { status });
+  updateApplicationStatus(appId: string, status: string): Observable<ApiResponse<Application>> {
+    return this.http.put<ApiResponse<Application>>(`${this.api}/api/applications/${appId}/status`, { status }).pipe(
+      map(res => ({ ...res, data: this.normalizeApplication(res.data) }))
+    );
   }
 
-  respondToOffer(appId: string, accepted: boolean): Observable<any> {
-    return this.http.post(`${this.api}/api/applications/${appId}/offer-response?accepted=${accepted}`, {});
+  markProfileViewed(applicationId: string): Observable<ApiResponse<Application>> {
+    return this.http.patch<ApiResponse<Application>>(`${this.api}/api/applications/${applicationId}/view`, {}).pipe(
+      map(res => ({ ...res, data: this.normalizeApplication(res.data) }))
+    );
+  }
+
+  respondToOffer(appId: string, accepted: boolean): Observable<ApiResponse<Application>> {
+    return this.http.post<ApiResponse<Application>>(`${this.api}/api/applications/${appId}/offer-response?accepted=${accepted}`, {}).pipe(
+      map(res => ({ ...res, data: this.normalizeApplication(res.data) }))
+    );
   }
 
   // Notifications
