@@ -6,8 +6,10 @@ import com.jobportal.application.dto.InterviewRequest;
 import com.jobportal.application.model.Interview;
 import com.jobportal.application.outbox.OutboxEvent;
 import com.jobportal.application.outbox.OutboxEventRepository;
+import com.jobportal.application.client.UserServiceClient;
 import com.jobportal.application.repository.ApplicationRepository;
 import com.jobportal.application.repository.InterviewRepository;
+import com.jobportal.application.service.GoogleCalendarService.CalendarResult;
 import com.jobportal.common.exception.BadRequestException;
 import com.jobportal.common.exception.ForbiddenException;
 import com.jobportal.common.exception.ResourceNotFoundException;
@@ -32,6 +34,8 @@ class InterviewServiceTest {
     @Mock InterviewRepository interviewRepository;
     @Mock ApplicationRepository applicationRepository;
     @Mock OutboxEventRepository outboxEventRepository;
+    @Mock GoogleCalendarService googleCalendarService;
+    @Mock UserServiceClient userServiceClient;
     @InjectMocks InterviewService interviewService;
 
     private InterviewRequest req;
@@ -62,12 +66,15 @@ class InterviewServiceTest {
     @Test
     void schedule_success() {
         when(applicationRepository.existsById("app-1")).thenReturn(true);
+        when(googleCalendarService.createEvent(any(), any(), any(), any(), any()))
+                .thenReturn(new CalendarResult("calendar-event-1", "https://meet.google.com/test"));
         when(interviewRepository.save(any(Interview.class))).thenReturn(savedInterview);
         when(outboxEventRepository.save(any(OutboxEvent.class))).thenAnswer(i -> i.getArgument(0));
 
         Interview result = interviewService.schedule(req, "rec-1");
 
         assertThat(result.getId()).isEqualTo("iv-1");
+        verify(googleCalendarService).createEvent(any(), eq(req.getScheduledAt()), eq(req.getScheduledAt().plusHours(1)), any(), any());
         verify(interviewRepository).save(any(Interview.class));
         verify(outboxEventRepository).save(any(OutboxEvent.class));
     }
@@ -117,6 +124,7 @@ class InterviewServiceTest {
         when(interviewRepository.save(any())).thenReturn(savedInterview);
         Interview result = interviewService.updateStatus("iv-1", "canceled", "rec-1");
         assertThat(result).isNotNull();
+        verify(googleCalendarService).deleteEvent(savedInterview.getGoogleCalendarEventId());
     }
 
     @Test
