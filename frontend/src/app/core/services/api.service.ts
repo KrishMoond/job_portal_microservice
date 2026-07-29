@@ -202,6 +202,20 @@ export class ApiService {
     return this.http.post(`${this.api}/api/companies`, data);
   }
 
+  createRecruiterVerification(data: {
+    companyName: string;
+    workEmail: string;
+    companyWebsite: string;
+    registrationNumber: string;
+    contactName: string;
+    phone?: string;
+    documentUrl: string;
+    documentType: string;
+    recruiterId?: string;
+  }): Observable<any> {
+    return this.http.post(`${this.api}/api/recruiter-verifications`, data);
+  }
+
   // Bookmarks
   bookmarkJob(jobId: string): Observable<any> {
     return this.http.post(`${this.api}/api/bookmarks/${jobId}`, {});

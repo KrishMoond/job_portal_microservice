@@ -1,0 +1,25 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: recruiter-verification-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/jobportal_recruiter_verification
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+jwt:
+  secret: ${JWT_SECRET:j0bP0rt@lS3cur3S3cr3tK3y!XyZ#2024$AbCdEfGhIjKlMnOpQrStUvWxYz12}

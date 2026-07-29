@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import '@angular/material/prebuilt-themes/azure-blue.css';
 @import "tailwindcss";
 
 @theme {
@@ -167,12 +169,35 @@
   /* Smooth scroll behavior */
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 84px;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .sr-visible {
+    opacity: 1 !important;
+    transform: translate3d(0, 0, 0) scale(1) !important;
   }
 
   /* Selection color */
   ::selection {
     background-color: rgba(108, 99, 255, 0.2);
     color: #111827;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

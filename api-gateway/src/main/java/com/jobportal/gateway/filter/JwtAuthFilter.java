@@ -89,6 +89,16 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         )),
         Map.entry("/api/recommendations", Map.of(
             HttpMethod.GET,  List.of("JOB_SEEKER")
+        )),
+        Map.entry("/api/recruiter-verifications", Map.of(
+            HttpMethod.POST, List.of("RECRUITER", "ADMIN")
+        )),
+        Map.entry("/api/admin", Map.of(
+            HttpMethod.GET,  List.of("ADMIN"),
+            HttpMethod.POST, List.of("ADMIN"),
+            HttpMethod.PUT,  List.of("ADMIN"),
+            HttpMethod.PATCH, List.of("ADMIN"),
+            HttpMethod.DELETE, List.of("ADMIN")
         ))
     );
 

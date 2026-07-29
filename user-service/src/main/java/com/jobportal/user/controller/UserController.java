@@ -51,8 +51,15 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, String>>> login(@Valid @RequestBody LoginRequest req) {
-        String email = authService.login(req);
-        return ResponseEntity.ok(ApiResponse.success(Map.of("email", email), "OTP sent to your email."));
+        Map<String, String> result = authService.login(req);
+        String token = result.remove("token");
+        if (token != null) {
+            return ResponseEntity.ok()
+                .header("Authorization", "Bearer " + token)
+                .header("Access-Control-Expose-Headers", "Authorization")
+                .body(ApiResponse.success(result, "Admin login successful"));
+        }
+        return ResponseEntity.ok(ApiResponse.success(result, "OTP sent to your email."));
     }
 
     @PostMapping("/verify-login-otp")

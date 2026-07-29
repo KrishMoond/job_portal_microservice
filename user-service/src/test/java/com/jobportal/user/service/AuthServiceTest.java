@@ -54,11 +54,27 @@ class AuthServiceTest {
         when(passwordEncoder.encode(anyString())).thenReturn("hashed-otp");
         doNothing().when(userService).sendLoginOtpEmail(anyString(), anyString());
 
-        String result = authService.login(req);
+        var result = authService.login(req);
 
-        assertThat(result).isEqualTo("john@example.com");
+        assertThat(result.get("email")).isEqualTo("john@example.com");
+        assertThat(result).doesNotContainKey("token");
         verify(userRepository).save(user);
         verify(userService).sendLoginOtpEmail(eq("john@example.com"), anyString());
+    }
+
+    @Test
+    void login_adminBypassesOtp_returnsToken() {
+        user.setRole(User.Role.ADMIN);
+        when(userRepository.findByEmail(req.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(req.getPassword(), user.getPassword())).thenReturn(true);
+        when(jwtUtil.generateToken("user-1", "ADMIN")).thenReturn("admin-jwt");
+
+        var result = authService.login(req);
+
+        assertThat(result.get("token")).isEqualTo("admin-jwt");
+        assertThat(result.get("role")).isEqualTo("ADMIN");
+        verify(userRepository, never()).save(any());
+        verify(userService, never()).sendLoginOtpEmail(anyString(), anyString());
     }
 
     @Test

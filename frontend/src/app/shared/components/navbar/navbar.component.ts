@@ -35,6 +35,9 @@ import { RippleDirective } from '../../directives/ripple.directive';
           } @else if (isRecruiter()) {
             <a routerLink="/recruiter/dashboard" routerLinkActive="text-primary font-semibold"
               class="text-sm text-gray-700 hover:text-primary font-medium transition-colors animated-underline">Dashboard</a>
+          } @else if (isAdmin()) {
+            <a routerLink="/admin/recruiter-verifications" routerLinkActive="text-primary font-semibold"
+              class="text-sm text-gray-700 hover:text-primary font-medium transition-colors animated-underline">Verification</a>
           }
         </div>
 
@@ -222,6 +225,15 @@ import { RippleDirective } from '../../directives/ripple.directive';
                         <span>Notifications</span>
                         <lucide-icon name="chevron-right" class="w-4 h-4 ml-auto text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all"></lucide-icon>
                       </a>
+                    } @else if (isAdmin()) {
+                      <a routerLink="/admin/recruiter-verifications" 
+                        class="flex items-center gap-3 px-4 py-3 text-sm text-gray-800 hover:text-primary transition-all font-semibold group rounded-xl hover:bg-white/40">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <lucide-icon name="shield-check" class="w-4 h-4 text-primary"></lucide-icon>
+                        </div>
+                        <span>Verification</span>
+                        <lucide-icon name="chevron-right" class="w-4 h-4 ml-auto text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all"></lucide-icon>
+                      </a>
                     }
                   </div>
                   
@@ -289,6 +301,11 @@ import { RippleDirective } from '../../directives/ripple.directive';
                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
                   <lucide-icon name="plus" class="w-4 h-4"></lucide-icon> Post a Job
                 </a>
+              } @else if (isAdmin()) {
+                <a routerLink="/admin/recruiter-verifications" (click)="showMobileMenu.set(false)"
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                  <lucide-icon name="shield-check" class="w-4 h-4"></lucide-icon> Verification
+                </a>
               }
               <a routerLink="/notifications" (click)="showMobileMenu.set(false)"
                 class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
@@ -337,6 +354,7 @@ export class NavbarComponent {
   readonly initial = computed(() => this.user()?.name?.charAt(0).toUpperCase() ?? '?');
   readonly isRecruiter = computed(() => this.user()?.role === 'RECRUITER');
   readonly isJobSeeker = computed(() => this.user()?.role === 'JOB_SEEKER');
+  readonly isAdmin = computed(() => this.user()?.role === 'ADMIN');
 
   constructor() {
     this.auth.currentUser$

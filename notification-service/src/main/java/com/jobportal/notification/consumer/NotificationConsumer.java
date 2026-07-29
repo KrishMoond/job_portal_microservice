@@ -6,6 +6,7 @@ import com.jobportal.common.events.InterviewScheduledEvent;
 import com.jobportal.common.events.JobAppliedEvent;
 import com.jobportal.common.events.JobClosedEvent;
 import com.jobportal.common.events.JobCreatedEvent;
+import com.jobportal.common.events.RecruiterVerificationEvent;
 import com.jobportal.common.events.ResumeUploadedEvent;
 import com.jobportal.notification.model.InAppNotification;
 import com.jobportal.notification.model.NotificationLog;
@@ -190,6 +191,40 @@ public class NotificationConsumer {
             saveLog("RESUME_UPLOADED", event.getUserId(), subject, body);
         } catch (Exception e) {
             log.error("[AMQP-CONSUMER] Failed to process ResumeUploadedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = "recruiter.verification.notification.queue")
+    public void onRecruiterVerification(String payload) {
+        try {
+            RecruiterVerificationEvent event = objectMapper.readValue(payload, RecruiterVerificationEvent.class);
+            log.info("[AMQP-CONSUMER] Received RecruiterVerificationEvent | submissionId={} | status={}", event.getSubmissionId(), event.getStatus());
+
+            String company = event.getCompanyName();
+            String message = switch (event.getStatus()) {
+                case "PENDING" -> "Your company registration for '" + company + "' has been submitted and is awaiting review.";
+                case "UNDER_REVIEW" -> "Your company registration for '" + company + "' is currently under review by our team.";
+                case "VERIFIED" -> "Congratulations! Your company '" + company + "' has been verified. You can now post jobs.";
+                case "REJECTED" -> "Your company registration for '" + company + "' has been rejected. Please contact support for more details.";
+                case "MORE_INFO_REQUESTED" -> "Additional information is required for your company registration '" + company + "'. Please check your submission.";
+                default -> "Your company registration status for '" + company + "' has been updated to: " + event.getStatus();
+            };
+
+            if (event.getRecruiterId() != null && !event.getRecruiterId().isBlank())
+                saveInAppNotification(event.getRecruiterId(), message);
+
+            if (event.getRecruiterEmail() != null) {
+                String subject = switch (event.getStatus()) {
+                    case "VERIFIED" -> "Company Verified: " + company;
+                    case "REJECTED" -> "Company Registration Rejected: " + company;
+                    case "MORE_INFO_REQUESTED" -> "Action Required: " + company;
+                    default -> "Company Registration Update: " + company;
+                };
+                emailService.sendEmail(event.getRecruiterEmail(), subject, message);
+                saveLog("RECRUITER_VERIFICATION", event.getRecruiterEmail(), subject, message);
+            }
+        } catch (Exception e) {
+            log.error("[AMQP-CONSUMER] Failed to process RecruiterVerificationEvent: {}", e.getMessage(), e);
         }
     }
 

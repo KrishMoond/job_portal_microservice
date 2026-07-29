@@ -53,6 +53,7 @@
     <module>search-service</module>
     <module>notification-service</module>
     <module>analytics-service</module>
+    <module>recruiter-verification-service</module>
   </modules>
 
   <dependencyManagement>

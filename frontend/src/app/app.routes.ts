@@ -49,6 +49,22 @@ export const routes: Routes = [
     loadComponent: () => import('./features/notifications/notifications.component').then(m => m.NotificationsComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'admin',
+    canActivate: [authGuard, roleGuard('ADMIN')],
+    canActivateChild: [authGuard, roleGuard('ADMIN')],
+    children: [
+      {
+        path: '',
+        redirectTo: 'recruiter-verifications',
+        pathMatch: 'full'
+      },
+      {
+        path: 'recruiter-verifications',
+        loadComponent: () => import('./features/admin/recruiter-verifications/recruiter-verifications.component').then(m => m.RecruiterVerificationsComponent)
+      }
+    ]
+  },
   // Seeker
   {
     path: 'seeker/applications',

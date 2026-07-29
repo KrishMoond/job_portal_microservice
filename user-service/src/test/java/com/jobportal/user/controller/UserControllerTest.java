@@ -60,7 +60,7 @@ class UserControllerTest {
         req.setEmail("john@example.com");
         req.setPassword("Secret@123");
 
-        when(authService.login(any())).thenReturn("john@example.com");
+        when(authService.login(any())).thenReturn(Map.of("email", "john@example.com"));
 
         mockMvc.perform(post("/api/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -68,6 +68,27 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value("john@example.com"));
+    }
+
+    @Test
+    void login_adminShouldReturnTokenHeader() throws Exception {
+        LoginRequest req = new LoginRequest();
+        req.setEmail("admin@jobportal.local");
+        req.setPassword("Admin@12345");
+
+        when(authService.login(any())).thenReturn(new java.util.HashMap<>(Map.of(
+            "token", "admin-token",
+            "email", "admin@jobportal.local",
+            "userId", "admin-1",
+            "role", "ADMIN"
+        )));
+
+        mockMvc.perform(post("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Authorization", "Bearer admin-token"))
+                .andExpect(jsonPath("$.data.role").value("ADMIN"));
     }
 
     @Test

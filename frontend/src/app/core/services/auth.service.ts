@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { User, LoginRequest, RegisterRequest, VerifyOtpRequest, ApiResponse } from '../../shared/models/models';
 
@@ -26,8 +26,21 @@ export class AuthService {
     return this.http.post<ApiResponse<void>>(`${environment.apiUrl}/api/users/resend-otp`, { email });
   }
 
-  login(data: LoginRequest): Observable<ApiResponse<{ email: string }>> {
-    return this.http.post<ApiResponse<{ email: string }>>(`${environment.apiUrl}/api/users/login`, data);
+  login(data: LoginRequest): Observable<ApiResponse<{ email: string; userId?: string; role?: string }>> {
+    return this.http.post<ApiResponse<{ email: string; userId?: string; role?: string }>>(
+      `${environment.apiUrl}/api/users/login`,
+      data,
+      { observe: 'response' }
+    ).pipe(
+      tap(response => {
+        const token = response.headers.get('Authorization')?.replace('Bearer ', '');
+        const user = response.body?.data;
+        if (token && user) {
+          this.setSession(token, user);
+        }
+      }),
+      map(response => response.body as ApiResponse<{ email: string; userId?: string; role?: string }>)
+    );
   }
 
   verifyLoginOtp(data: VerifyOtpRequest): Observable<any> {

@@ -517,6 +517,11 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
     this.auth.login({ email: this.email(), password: this.password() }).subscribe({
       next: (res: any) => {
+        if (res?.data?.role === 'ADMIN') {
+          this.loading.set(false);
+          this.router.navigate(['/admin/recruiter-verifications']);
+          return;
+        }
         const email = res?.data?.email || this.email();
         this.router.navigate(['/verify-login-otp'], { queryParams: { email } });
       },

@@ -26,6 +26,10 @@ public class GatewayRoutesConfig {
                 .uri("lb://notification-service"))
             .route("analytics-service",    r -> r.path("/api/analytics/**", "/api/recommendations/**")
                 .uri("lb://analytics-service"))
+            .route("recruiter-verification-submissions", r -> r.path("/api/recruiter-verifications/**")
+                .uri("lb://recruiter-verification-service"))
+            .route("recruiter-verification-service", r -> r.path("/api/admin/recruiter-verifications/**")
+                .uri("lb://recruiter-verification-service"))
             // Swagger api-docs proxy routes
             .route("docs-user",         r -> r.path("/v3/api-docs/user-service")
                 .filters(f -> f.rewritePath("/v3/api-docs/user-service", "/v3/api-docs"))
@@ -48,6 +52,9 @@ public class GatewayRoutesConfig {
             .route("docs-analytics",    r -> r.path("/v3/api-docs/analytics-service")
                 .filters(f -> f.rewritePath("/v3/api-docs/analytics-service", "/v3/api-docs"))
                 .uri("lb://analytics-service"))
+            .route("docs-recruiter-verification", r -> r.path("/v3/api-docs/recruiter-verification-service")
+                .filters(f -> f.rewritePath("/v3/api-docs/recruiter-verification-service", "/v3/api-docs"))
+                .uri("lb://recruiter-verification-service"))
             .build();
     }
 }

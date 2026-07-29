@@ -27,20 +27,31 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
     }
-    public String login(LoginRequest req) {
+    public Map<String, String> login(LoginRequest req) {
         User user = userRepository.findByEmail(req.getEmail())
             .orElseThrow(() -> new BadRequestException("Invalid credentials"));
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword()))
             throw new BadRequestException("Invalid credentials");
         if (!user.isEmailVerified())
             throw new BadRequestException("Please verify your email before logging in");
+        if (user.getRole() == User.Role.ADMIN) {
+            String token = jwtUtil.generateToken(user.getId(), user.getRole().name());
+            Map<String, String> result = new HashMap<>();
+            result.put("token", token);
+            result.put("userId", user.getId());
+            result.put("role", user.getRole().name());
+            result.put("email", user.getEmail());
+            return result;
+        }
         String otp = generateOtp();
         user.setVerificationOtp(passwordEncoder.encode(otp));
         user.setVerificationOtpExpiry(LocalDateTime.now().plusMinutes(10));
         user.setOtpAttempts(0);
         userRepository.save(user);
         userService.sendLoginOtpEmail(user.getEmail(), otp);
-        return user.getEmail();
+        Map<String, String> result = new HashMap<>();
+        result.put("email", user.getEmail());
+        return result;
     }
 
     public Map<String, String> verifyLoginOtp(String email, String otp) {
