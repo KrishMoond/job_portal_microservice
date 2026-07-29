@@ -2,6 +2,16 @@ FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /build
 COPY pom.xml .
 COPY common-lib/pom.xml common-lib/
+COPY config-server/pom.xml config-server/
+COPY eureka-server/pom.xml eureka-server/
+COPY api-gateway/pom.xml api-gateway/
+COPY user-service/pom.xml user-service/
+COPY job-service/pom.xml job-service/
+COPY application-service/pom.xml application-service/
+COPY resume-service/pom.xml resume-service/
+COPY search-service/pom.xml search-service/
+COPY notification-service/pom.xml notification-service/
+COPY analytics-service/pom.xml analytics-service/
 COPY recruiter-verification-service/pom.xml recruiter-verification-service/
 RUN mvn dependency:go-offline -pl common-lib,recruiter-verification-service -am -q
 COPY common-lib/src common-lib/src
