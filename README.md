@@ -1,6 +1,6 @@
 # HireHub — Job Portal
 
-A full-stack job portal built with a **Spring Boot microservices** backend and an **Angular 21** frontend. Supports job posting, applications, resume management, interview scheduling, real-time notifications, search, and analytics.
+A full-stack job portal built with a **Spring Boot microservices** backend and an **Angular 21** frontend. Supports job posting, applications, resume management, interview scheduling, real-time notifications, search, analytics, and admin-driven recruiter company verification.
 
 ---
 
@@ -21,7 +21,7 @@ A full-stack job portal built with a **Spring Boot microservices** backend and a
                                 │                     │
                          ┌──────▼─────────────────────▼──────┐
                          │           RabbitMQ                 │
-                         │         (10 queues)                │
+                         │         (11 queues)                │
                          └──────┬──────────┬──────────┬───────┘
                                 │          │          │
                     ┌───────────▼──┐ ┌─────▼────┐ ┌──▼──────────┐
@@ -44,6 +44,7 @@ A full-stack job portal built with a **Spring Boot microservices** backend and a
 | search-service | 8085 | Full-text job search with PostgreSQL trigram |
 | notification-service | 8086 | In-app notifications + email via Mailtrap |
 | analytics-service | 8087 | Event tracking, job recommendations |
+| recruiter-verification-service | 8090 | Admin verification of recruiter company registrations |
 | config-server | 8888 | Centralized Spring Cloud Config |
 | eureka-server | 8761 | Netflix Eureka service discovery |
 
@@ -120,6 +121,7 @@ CREATE DATABASE jobportal_resumes;
 CREATE DATABASE jobportal_search;
 CREATE DATABASE jobportal_notifications;
 CREATE DATABASE jobportal_analytics;
+CREATE DATABASE jobportal_recruiter_verification;
 ```
 
 ---
@@ -156,7 +158,7 @@ mvn clean install -pl common-lib -q
 ### Step 2 — Build all services
 ```bash
 mvn clean package \
-  -pl user-service,job-service,application-service,resume-service,search-service,notification-service,analytics-service,api-gateway,config-server,eureka-server \
+  -pl user-service,job-service,application-service,resume-service,search-service,notification-service,analytics-service,api-gateway,config-server,eureka-server,recruiter-verification-service \
   --also-make -DskipTests -q
 ```
 
@@ -199,6 +201,7 @@ http://localhost:8080/swagger-ui.html
 | search-service | http://localhost:8085/swagger-ui/index.html |
 | notification-service | http://localhost:8086/swagger-ui/index.html |
 | analytics-service | http://localhost:8087/swagger-ui/index.html |
+| recruiter-verification-service | http://localhost:8090/swagger-ui/index.html |
 
 ---
 
@@ -288,6 +291,15 @@ Every login triggers a fresh OTP sent to the registered email address (2FA on ev
 | DELETE | /api/bookmarks/{jobId} | JOB_SEEKER | Remove bookmark |
 | GET | /api/bookmarks | JOB_SEEKER | Get my bookmarks |
 
+### Recruiter Verification
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| POST | /api/recruiter-verifications | RECRUITER | Submit company for verification |
+| GET | /api/admin/recruiter-verifications/queue | ADMIN | List pending / under-review submissions |
+| GET | /api/admin/recruiter-verifications/history | ADMIN | List verified / rejected submissions |
+| GET | /api/admin/recruiter-verifications/{id} | ADMIN | Get submission detail (auto sets UNDER_REVIEW) |
+| POST | /api/admin/recruiter-verifications/{id}/review | ADMIN | Approve, reject, or request more info |
+
 ---
 
 ## Messaging Architecture
@@ -313,6 +325,7 @@ Failed publish attempts are retried up to **5 times**. After 5 failures the even
 | interview.scheduled.notification.queue | application-service | notification-service |
 | resume.uploaded.notification.queue | resume-service | notification-service |
 | resume.uploaded.analytics.queue | resume-service | analytics-service |
+| recruiter.verification.notification.queue | recruiter-verification-service | notification-service |
 
 ---
 
@@ -370,6 +383,8 @@ Key migrations applied across services:
 | application-service | V7 | Add `retry_count` and `dead_lettered` to `outbox_events` |
 | job-service | V5 | Add `retry_count` and `dead_lettered` to `outbox_events` |
 | resume-service | V6 | Add `retry_count` and `dead_lettered` to `outbox_events` |
+| recruiter-verification-service | V3 | Create `outbox_events` table |
+| recruiter-verification-service | V4 | Add `recruiter_id` to `recruiter_submissions` |
 
 ---
 
@@ -388,6 +403,7 @@ job-portal-microservices/
 ├── search-service/          # Full-text search with PostgreSQL trigram
 ├── notification-service/    # Email + in-app notifications
 ├── analytics-service/       # Event tracking, recommendations
+├── recruiter-verification-service/  # Admin verification of recruiter companies
 ├── frontend/                # Angular 21 SPA
 ├── docker-compose.yml       # Infrastructure (RabbitMQ, Zipkin, PostgreSQL)
 ├── .env.example             # Environment variable template
@@ -447,3 +463,37 @@ All services are instrumented with Micrometer + Zipkin:
 Eureka dashboard: `http://localhost:8761`
 
 All services register automatically on startup.
+
+---
+
+## Recruiter Verification Flow
+
+When a recruiter registers a company it goes through an admin review pipeline before they can post jobs.
+
+```
+Recruiter submits company
+  → POST /api/recruiter-verifications
+  → Status: PENDING  ──────────────────────────► Recruiter notified (in-app + email)
+
+Admin opens submission
+  → GET /api/admin/recruiter-verifications/{id}
+  → Status: UNDER_REVIEW ──────────────────────► Recruiter notified (in-app + email)
+
+Admin reviews
+  → POST /api/admin/recruiter-verifications/{id}/review
+  → Decision: APPROVE  → Status: VERIFIED ──────► Recruiter notified (in-app + email)
+  → Decision: REJECT   → Status: REJECTED ──────► Recruiter notified (in-app + email)
+  → Decision: REQUEST_MORE_INFO → Status: MORE_INFO_REQUESTED ► Recruiter notified
+```
+
+All status transitions publish a `RecruiterVerificationEvent` via the **Transactional Outbox Pattern** to `recruiter.verification.notification.queue`, consumed by `notification-service`.
+
+### Notification Messages by Status
+
+| Status | Message |
+|--------|---------|
+| `PENDING` | Your company registration for '{company}' has been submitted and is awaiting review. |
+| `UNDER_REVIEW` | Your company registration for '{company}' is currently under review by our team. |
+| `VERIFIED` | Congratulations! Your company '{company}' has been verified. You can now post jobs. |
+| `REJECTED` | Your company registration for '{company}' has been rejected. Please contact support. |
+| `MORE_INFO_REQUESTED` | Additional information is required for your company registration '{company}'. |

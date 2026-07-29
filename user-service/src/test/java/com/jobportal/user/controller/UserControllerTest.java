@@ -60,7 +60,7 @@ class UserControllerTest {
         req.setEmail("john@example.com");
         req.setPassword("Secret@123");
 
-        when(authService.login(any())).thenReturn(Map.of("email", "john@example.com"));
+        when(authService.login(any())).thenReturn(new java.util.HashMap<>(Map.of("email", "john@example.com")));
 
         mockMvc.perform(post("/api/users/login")
                 .contentType(MediaType.APPLICATION_JSON)
