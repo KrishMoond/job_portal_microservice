@@ -32,7 +32,7 @@ jobs:
       - name: Build and test all services
         run: |
           mvn clean package \
-            -pl config-server,eureka-server,api-gateway,user-service,job-service,application-service,resume-service,search-service,notification-service,analytics-service \
+            -pl config-server,eureka-server,api-gateway,user-service,job-service,application-service,resume-service,search-service,notification-service,analytics-service,recruiter-verification-service \
             --also-make -q -DskipTests=false
 
       - name: Upload JAR artifacts
@@ -51,6 +51,7 @@ jobs:
             search-service/target/*.jar
             notification-service/target/*.jar
             analytics-service/target/*.jar
+            recruiter-verification-service/target/*.jar
 
   sonarqube:
     name: SonarQube Analysis
@@ -104,6 +105,7 @@ jobs:
           - { name: search-service }
           - { name: notification-service }
           - { name: analytics-service }
+          - { name: recruiter-verification-service }
 
     steps:
       - name: Checkout code
@@ -123,7 +125,7 @@ jobs:
 
       - name: Restore JARs to service target directories
         run: |
-          for svc in config-server eureka-server api-gateway user-service job-service application-service resume-service search-service notification-service analytics-service; do
+          for svc in config-server eureka-server api-gateway user-service job-service application-service resume-service search-service notification-service analytics-service recruiter-verification-service; do
             mkdir -p $svc/target
             find . -maxdepth 1 -name "$svc-*.jar" -exec mv {} $svc/target/ \;
           done

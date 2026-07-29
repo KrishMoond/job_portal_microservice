@@ -12,6 +12,7 @@ COPY resume-service/pom.xml resume-service/
 COPY search-service/pom.xml search-service/
 COPY notification-service/pom.xml notification-service/
 COPY analytics-service/pom.xml analytics-service/
+COPY recruiter-verification-service/pom.xml recruiter-verification-service/
 RUN mvn dependency:go-offline -pl common-lib,resume-service -am -q
 COPY common-lib/src common-lib/src
 COPY resume-service/src resume-service/src
