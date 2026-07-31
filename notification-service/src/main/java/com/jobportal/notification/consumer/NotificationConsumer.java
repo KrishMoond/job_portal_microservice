@@ -215,9 +215,11 @@ public class NotificationConsumer {
 
             if (event.getRecruiterEmail() != null) {
                 String subject = switch (event.getStatus()) {
+                    case "PENDING" -> "Company Registration Received: " + company;
+                    case "UNDER_REVIEW" -> "Company Registration Under Review: " + company;
                     case "VERIFIED" -> "Company Verified: " + company;
                     case "REJECTED" -> "Company Registration Rejected: " + company;
-                    case "MORE_INFO_REQUESTED" -> "Action Required: " + company;
+                    case "MORE_INFO_REQUESTED" -> "Action Required — Additional Info Needed: " + company;
                     default -> "Company Registration Update: " + company;
                 };
                 emailService.sendEmail(event.getRecruiterEmail(), subject, message);

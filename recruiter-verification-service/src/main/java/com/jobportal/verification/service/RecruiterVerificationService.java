@@ -77,6 +77,7 @@ public class RecruiterVerificationService {
             .orElseThrow(() -> new ResourceNotFoundException("Recruiter submission not found"));
         if (submission.getStatus() == VerificationStatus.PENDING) {
             submission.setStatus(VerificationStatus.UNDER_REVIEW);
+            submission = submissions.save(submission);
             publishEvent(submission, VerificationStatus.UNDER_REVIEW.name());
         }
         return toDetailDto(submission);
