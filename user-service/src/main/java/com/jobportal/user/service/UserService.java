@@ -128,6 +128,13 @@ public class UserService {
             "Your login OTP is: " + otp + "\n\nThis OTP will expire in 10 minutes.\nIf you did not attempt to log in, please ignore this email.");
     }
 
+    public void sendPasswordResetEmail(String email, String otp) {
+        sendEmail(email, "Reset Your Password - HireHub",
+            "Your password reset code is: " + otp
+            + "\n\nThis code expires in 10 minutes. Enter it on the reset password page."
+            + "\n\nIf you did not request this, please ignore this email.");
+    }
+
     private void sendEmail(String to, String subject, String text) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

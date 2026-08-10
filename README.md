@@ -215,6 +215,8 @@ http://localhost:8080/swagger-ui.html
 | POST | /api/users/resend-otp | Resend OTP (registration or login) |
 | POST | /api/users/login | Login — sends login OTP, returns `{email}` |
 | POST | /api/users/verify-login-otp | Submit login OTP — returns JWT in `Authorization` header |
+| POST | /api/users/forgot-password | Send password reset link to email |
+| POST | /api/users/reset-password | Reset password using token from email |
 
 ### Auth Flow
 
@@ -346,6 +348,8 @@ Failed publish attempts are retried up to **5 times**. After 5 failures the even
 /api/users/verify-email
 /api/users/verify-login-otp
 /api/users/resend-otp
+/api/users/forgot-password
+/api/users/reset-password
 /api/search/jobs
 /api/search/categories
 /actuator/**
@@ -380,6 +384,7 @@ Key migrations applied across services:
 | Service | Migration | Change |
 |---------|-----------|--------|
 | user-service | V6 | `verification_otp` → VARCHAR(60) for BCrypt; add `otp_attempts` INTEGER |
+| user-service | V8 | Add `reset_token` VARCHAR(60) and `reset_token_expiry` TIMESTAMP to `users` |
 | application-service | V7 | Add `retry_count` and `dead_lettered` to `outbox_events` |
 | job-service | V5 | Add `retry_count` and `dead_lettered` to `outbox_events` |
 | resume-service | V6 | Add `retry_count` and `dead_lettered` to `outbox_events` |

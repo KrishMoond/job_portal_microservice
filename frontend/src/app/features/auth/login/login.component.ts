@@ -321,12 +321,13 @@ import { LucideAngularModule } from 'lucide-angular';
             }
           </div>
 
-          <!-- Remember me -->
-          <div class="flex items-center pt-1">
+          <!-- Remember me + forgot password -->
+          <div class="flex items-center justify-between pt-1">
             <label class="flex items-center gap-2 cursor-pointer group select-none">
               <input type="checkbox" [(ngModel)]="rememberMe" name="remember" class="custom-check" />
               <span class="text-xs text-gray-600 group-hover:text-gray-900 transition-colors">Remember me</span>
             </label>
+            <a routerLink="/forgot-password" class="text-xs text-indigo-600 hover:text-indigo-700 font-semibold transition-colors">Forgot password?</a>
           </div>
 
           <!-- Error message -->

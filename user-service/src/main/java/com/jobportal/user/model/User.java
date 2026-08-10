@@ -43,6 +43,9 @@ public class User {
     private LocalDateTime verificationOtpExpiry;
     private int otpAttempts = 0;
 
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
+
     public enum Role { JOB_SEEKER, RECRUITER, ADMIN }
     public enum ExperienceLevel { ENTRY, JUNIOR, MID, SENIOR, EXECUTIVE }
 
@@ -102,4 +105,8 @@ public class User {
     public void setVerificationOtpExpiry(LocalDateTime verificationOtpExpiry) { this.verificationOtpExpiry = verificationOtpExpiry; }
     public int getOtpAttempts() { return otpAttempts; }
     public void setOtpAttempts(int otpAttempts) { this.otpAttempts = otpAttempts; }
+    public String getResetToken() { return resetToken; }
+    public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+    public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
+    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 }

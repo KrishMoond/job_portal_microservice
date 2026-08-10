@@ -72,6 +72,18 @@ public class UserController {
             .body(ApiResponse.success(result, "Login successful"));
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestBody Map<String, String> body) {
+        authService.forgotPassword(body.get("email"));
+        return ResponseEntity.ok(ApiResponse.success(null, "If that email exists, a reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody Map<String, String> body) {
+        authService.resetPassword(body.get("email"), body.get("token"), body.get("newPassword"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Password reset successful. You can now log in."));
+    }
+
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable String userId) {
         return ResponseEntity.ok(ApiResponse.success(userService.getById(userId), "User fetched"));

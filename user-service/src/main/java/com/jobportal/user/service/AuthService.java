@@ -88,4 +88,29 @@ public class AuthService {
     private String generateOtp() {
         return String.format("%06d", new SecureRandom().nextInt(1_000_000));
     }
+
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || !user.isEmailVerified()) return;
+        String otp = generateOtp();
+        user.setResetToken(passwordEncoder.encode(otp));
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+        userService.sendPasswordResetEmail(email, otp);
+    }
+
+    public void resetPassword(String email, String token, String newPassword) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new BadRequestException("Invalid or expired code"));
+        if (user.getResetToken() == null || user.getResetTokenExpiry() == null)
+            throw new BadRequestException("Invalid or expired code");
+        if (LocalDateTime.now().isAfter(user.getResetTokenExpiry()))
+            throw new BadRequestException("Code has expired. Please request a new one.");
+        if (!passwordEncoder.matches(token, user.getResetToken()))
+            throw new BadRequestException("Invalid code");
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
+    }
 }

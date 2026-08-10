@@ -32,6 +32,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         "/api/users/verify-email",
         "/api/users/verify-login-otp",
         "/api/users/resend-otp",
+        "/api/users/forgot-password",
+        "/api/users/reset-password",
         "/api/search/jobs",
         "/api/search/categories",
         "/actuator",
