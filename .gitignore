@@ -64,6 +64,11 @@ application-service/src/main/resources/google-service-account.json
 api-tester.html
 repair-flyway.sql
 
+# ── Stray root-level debug/status files ───────────────────────────────────────
+FAILED
+PASSED
+DEBUG
+
 # ── Frontend ──────────────────────────────────────────────────────────────────
 frontend/node_modules/
 frontend/dist/

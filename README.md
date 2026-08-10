@@ -452,7 +452,7 @@ The Maven parent POM pins the Sonar scanner version and publishes JaCoCo XML rep
 ## Distributed Tracing
 
 All services are instrumented with Micrometer + Zipkin:
-- Sampling rate: 100%
+- Sampling rate: 100% — **dev only**; in production use 5–10% (`management.tracing.sampling.probability=0.05`) or tail-based sampling via an OpenTelemetry Collector to avoid trace storage overhead
 - Zipkin UI: `http://localhost:9411`
 - Trace ID and Span ID are included in all log lines
 
@@ -463,6 +463,35 @@ All services are instrumented with Micrometer + Zipkin:
 Eureka dashboard: `http://localhost:8761`
 
 All services register automatically on startup.
+
+---
+
+## Rate Limiting
+
+The API Gateway applies a token-bucket rate limiter to every route via Spring Cloud Gateway's built-in `RequestRateLimiter` filter:
+
+- **Key** — authenticated user ID (`X-User-Id` header) or remote IP for public routes
+- **Replenish rate** — 10 requests / second
+- **Burst capacity** — 20 requests
+- **Dev** — in-memory `KeyResolver` bean (`RateLimitConfig`)
+- **Prod** — swap to `RedisRateLimiter` bean backed by Redis for distributed enforcement across gateway replicas
+
+---
+
+## Known Limitations
+
+This project is a portfolio demonstration. The following are known trade-offs and areas for improvement before production use:
+
+| Area | Current State | Production Path |
+|------|--------------|----------------|
+| Test coverage | Basic unit tests per service | 70%+ coverage with JUnit + Mockito; integration tests with Testcontainers |
+| Rate limiting | In-memory token bucket at gateway | Redis-backed `RedisRateLimiter` for distributed enforcement |
+| Search scalability | PostgreSQL trigram index | Elasticsearch or OpenSearch beyond ~1M job records |
+| Tracing sample rate | 100% (dev only) | 5–10% or tail-based sampling in prod |
+| Resume storage | S3 with DB fallback | S3 only in prod; DB storage is a dev convenience |
+| Chat messages | Stored in DB, polled by client | WebSocket / STOMP for real-time delivery |
+| API versioning | No versioning (`/api/...`) | `/api/v1/...` convention before any breaking changes |
+| Service count | 11 services for a portfolio project | Could consolidate to 4–5 services at small team scale |
 
 ---
 
