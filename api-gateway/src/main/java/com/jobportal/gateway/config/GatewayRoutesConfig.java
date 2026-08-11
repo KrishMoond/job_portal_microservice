@@ -11,7 +11,7 @@ public class GatewayRoutesConfig {
     @Bean
     public RouteLocator routeLocator(RouteLocatorBuilder builder) {
         return builder.routes()
-            // API routes for microservices
+            // ── Unversioned routes (legacy, kept for backward compatibility) ──
             .route("user-service",         r -> r.path("/api/users/**", "/api/bookmarks/**", "/api/companies/**")
                 .uri("lb://user-service"))
             .route("job-service",          r -> r.path("/api/jobs/**")
@@ -29,6 +29,34 @@ public class GatewayRoutesConfig {
             .route("recruiter-verification-submissions", r -> r.path("/api/recruiter-verifications/**")
                 .uri("lb://recruiter-verification-service"))
             .route("recruiter-verification-service", r -> r.path("/api/admin/recruiter-verifications/**")
+                .uri("lb://recruiter-verification-service"))
+            // ── Versioned routes /api/v1/** (strip version prefix before forwarding) ──
+            .route("v1-user-service",         r -> r.path("/api/v1/users/**", "/api/v1/bookmarks/**", "/api/v1/companies/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://user-service"))
+            .route("v1-job-service",          r -> r.path("/api/v1/jobs/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://job-service"))
+            .route("v1-app-service",          r -> r.path("/api/v1/applications/**", "/api/v1/interviews/**", "/api/v1/messages/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://application-service"))
+            .route("v1-resume-service",       r -> r.path("/api/v1/resumes/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://resume-service"))
+            .route("v1-search-service",       r -> r.path("/api/v1/search/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://search-service"))
+            .route("v1-notification-service", r -> r.path("/api/v1/notifications/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://notification-service"))
+            .route("v1-analytics-service",    r -> r.path("/api/v1/analytics/**", "/api/v1/recommendations/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://analytics-service"))
+            .route("v1-recruiter-verification-submissions", r -> r.path("/api/v1/recruiter-verifications/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
+                .uri("lb://recruiter-verification-service"))
+            .route("v1-recruiter-verification-admin", r -> r.path("/api/v1/admin/recruiter-verifications/**")
+                .filters(f -> f.rewritePath("/api/v1/(?<segment>.*)", "/api/${segment}"))
                 .uri("lb://recruiter-verification-service"))
             // Swagger api-docs proxy routes
             .route("docs-user",         r -> r.path("/v3/api-docs/user-service")

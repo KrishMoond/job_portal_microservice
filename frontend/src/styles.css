@@ -696,9 +696,16 @@
     100% { transform: scale(2); opacity: 0; }
   }
 
-  /* ── Vibrant Gradient Hero ────────────────────────────────────────────── */
+  /* ── Brand Gradient — single source of truth used everywhere ──────────── */
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, #6c63ff 0%, #8b5cf6 45%, #14b8a6 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Legacy alias — kept so existing usages still work */
   .bg-vibrant-gradient {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 40%, var(--color-accent) 70%, var(--color-primary) 100%);
+    background: linear-gradient(135deg, #6c63ff 0%, #8b5cf6 45%, #14b8a6 100%);
     position: relative;
     overflow: hidden;
   }
@@ -1765,3 +1772,79 @@ input[type="range"]::-moz-range-thumb:hover {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   VISUAL CONSISTENCY PASS — avatar accents, notification icons, card polish
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Avatar accent palette (rotating per company initial) ───────────────── */
+.avatar-a0 { background: linear-gradient(135deg, #6c63ff, #8b5cf6); color: #fff; }
+.avatar-a1 { background: linear-gradient(135deg, #0ea5e9, #38bdf8); color: #fff; }
+.avatar-a2 { background: linear-gradient(135deg, #10b981, #34d399); color: #fff; }
+.avatar-a3 { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #fff; }
+.avatar-a4 { background: linear-gradient(135deg, #ef4444, #f87171); color: #fff; }
+.avatar-a5 { background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: #fff; }
+.avatar-a6 { background: linear-gradient(135deg, #ec4899, #f472b6); color: #fff; }
+.avatar-a7 { background: linear-gradient(135deg, #14b8a6, #2dd4bf); color: #fff; }
+
+/* ── Notification type icon containers ──────────────────────────────────── */
+.notif-icon-interview  { background: rgba(59,130,246,0.12);  color: #2563eb; }
+.notif-icon-offer      { background: rgba(16,185,129,0.12);  color: #059669; }
+.notif-icon-rejected   { background: rgba(239,68,68,0.12);   color: #dc2626; }
+.notif-icon-shortlist  { background: rgba(245,158,11,0.12);  color: #d97706; }
+.notif-icon-applied    { background: rgba(108,99,255,0.12);  color: #6c63ff; }
+.notif-icon-verified   { background: rgba(20,184,166,0.12);  color: #0d9488; }
+.notif-icon-default    { background: rgba(107,114,128,0.12); color: #6b7280; }
+
+/* ── Notification date group header ─────────────────────────────────────── */
+.notif-group-header {
+  padding: 0.5rem 1.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ── Job card tier typography ────────────────────────────────────────────── */
+.job-title-tier   { font-size: 1rem;   font-weight: 700; color: #111827; line-height: 1.4; }
+.job-company-tier { font-size: 0.8125rem; font-weight: 600; color: #6b7280; }
+.job-meta-tier    { font-size: 0.75rem;  font-weight: 500; color: #9ca3af; }
+.job-salary-tier  {
+  font-size: 0.8125rem; font-weight: 700; color: #059669;
+  background: #f0fdf4; border: 1px solid #bbf7d0;
+  padding: 0.2rem 0.6rem; border-radius: 0.375rem;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+}
+
+/* ── Profile sidebar stat card ───────────────────────────────────────────── */
+.profile-stat-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.875rem;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: box-shadow 0.2s ease;
+}
+.profile-stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+.profile-stat-value { font-size: 1.5rem; font-weight: 800; color: #111827; }
+.profile-stat-label { font-size: 0.75rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── Consistent field display row ───────────────────────────────────────── */
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #f3f4f6;
+  border-radius: 0.75rem;
+  background: #fafafa;
+  transition: border-color 0.15s;
+}
+.profile-field:hover { border-color: #e5e7eb; }
+.profile-field-label { font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; }
+.profile-field-value { font-size: 0.9375rem; font-weight: 600; color: #111827; }

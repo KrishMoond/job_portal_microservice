@@ -19,7 +19,7 @@ import { RippleDirective } from '../../../shared/directives/ripple.directive';
   template: `
     <div class="min-h-screen bg-gray-50 flex flex-col">
       <!-- Top Search Bar - Full Width Hero -->
-      <div class="w-full bg-animated-gradient relative overflow-hidden py-12 shadow-lg">
+      <div class="w-full bg-brand-gradient relative overflow-hidden py-12 shadow-lg">
         <!-- Animated mesh gradient blobs -->
         <div class="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-blob"></div>
         <div class="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-blob-delay"></div>
@@ -326,46 +326,47 @@ import { RippleDirective } from '../../../shared/directives/ripple.directive';
                   [class.border-l-amber-500]="job.location && !job.location.toLowerCase().includes('full') && !job.location.toLowerCase().includes('remote')"
                   style="transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s ease">
                   
-                  <!-- Logo -->
-                  <div class="flex-shrink-0 w-16 h-16 rounded-xl border border-gray-100 flex items-center justify-center bg-white shadow-sm text-gray-400 font-bold text-2xl group-hover:scale-105 transition-transform duration-300 z-10">
+                  <!-- Logo with accent color -->
+                  <div class="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center font-black text-base group-hover:scale-105 transition-transform duration-300 z-10 shadow-sm"
+                    [ngClass]="avatarClass(job.company)">
                     {{ job.company ? job.company.substring(0,2).toUpperCase() : 'CO' }}
                   </div>
-                  
+
                   <!-- Info -->
-                  <div class="flex-1 z-10">
-                    <div class="flex justify-between items-start mb-2">
-                      <a [routerLink]="['/jobs', job.jobId || job['id']]" class="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">{{ job.title }}</a>
-                      <div class="flex gap-2">
-                        @if (job.status === 'CLOSED') {
-                          <span class="badge badge-closed shrink-0">Closed</span>
-                        } @else {
-                          <span class="badge badge-active flex items-center gap-1 shrink-0">
-                            <lucide-icon name="zap" class="w-3 h-3 fill-current"></lucide-icon> Actively Hiring
-                          </span>
-                        }
-                      </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 mb-4 font-medium">
-                      <span class="flex items-center gap-1.5 text-gray-700">
-                        <lucide-icon name="building-2" class="w-4 h-4"></lucide-icon>
-                        {{ job.company }}
-                      </span>
-                      <span class="flex items-center gap-1.5">
-                        <lucide-icon name="map-pin" class="w-4 h-4"></lucide-icon>
-                        {{ job.location }}
-                      </span>
-                      @if (job.salary) {
-                        <span class="flex items-center gap-1.5 text-green-600 bg-green-50 px-2 py-0.5 rounded-md font-semibold">
-                          <lucide-icon name="banknote" class="w-4 h-4"></lucide-icon>
-                          {{ job.salary }}
+                  <div class="flex-1 z-10 min-w-0">
+                    <!-- Tier 1: title + status -->
+                    <div class="flex justify-between items-start mb-1 gap-2">
+                      <a [routerLink]="['/jobs', job.jobId || job['id']]" class="job-title-tier group-hover:text-primary transition-colors line-clamp-1">{{ job.title }}</a>
+                      @if (job.status === 'CLOSED') {
+                        <span class="badge badge-closed shrink-0 text-xs">Closed</span>
+                      } @else {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200 shrink-0">
+                          <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Hiring
                         </span>
                       }
-                      <span class="flex items-center gap-1.5">
-                        <lucide-icon name="clock" class="w-4 h-4"></lucide-icon>
-                        {{ formatDaysAgo(job.createdAt) }}
+                    </div>
+
+                    <!-- Tier 2: company + location -->
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2.5">
+                      <span class="job-company-tier flex items-center gap-1">
+                        <lucide-icon name="building-2" class="w-3.5 h-3.5"></lucide-icon> {{ job.company }}
+                      </span>
+                      <span class="job-meta-tier flex items-center gap-1">
+                        <lucide-icon name="map-pin" class="w-3.5 h-3.5"></lucide-icon> {{ job.location }}
+                      </span>
+                      <span class="job-meta-tier flex items-center gap-1">
+                        <lucide-icon name="clock" class="w-3.5 h-3.5"></lucide-icon> {{ formatDaysAgo(job.createdAt) }}
                       </span>
                     </div>
+
+                    <!-- Tier 3: salary (visually distinct) -->
+                    @if (job.salary) {
+                      <div class="mb-3">
+                        <span class="job-salary-tier">
+                          <lucide-icon name="banknote" class="w-3.5 h-3.5"></lucide-icon> {{ job.salary }}
+                        </span>
+                      </div>
+                    }
 
                     <!-- Tags & Easy Apply -->
                     <div class="flex justify-between items-center flex-wrap gap-4 mt-auto border-t border-gray-100 pt-4">
@@ -827,5 +828,11 @@ export class JobListComponent implements OnInit, OnDestroy {
   removeLocation(): void {
     this.location = '';
     this.router.navigate(['/jobs'], { queryParams: { keyword: this.keyword.trim() || null } });
+  }
+
+  avatarClass(company: string | undefined): string {
+    const classes = ['avatar-a0','avatar-a1','avatar-a2','avatar-a3','avatar-a4','avatar-a5','avatar-a6','avatar-a7'];
+    const code = (company || 'C').charCodeAt(0);
+    return classes[code % classes.length];
   }
 }

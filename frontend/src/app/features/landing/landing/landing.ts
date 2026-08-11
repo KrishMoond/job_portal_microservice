@@ -35,7 +35,7 @@ function iconFor(category: string): string {
   template: `
     <div class="bg-gray-50 min-h-screen">
       <!-- Hero Section with Animated Blobs -->
-      <section class="bg-vibrant-gradient w-full py-24 text-center relative overflow-hidden">
+      <section class="bg-brand-gradient w-full py-24 text-center relative overflow-hidden">
         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay"></div>
         <!-- Animated blobs -->
         <div class="absolute top-10 left-10 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl animate-blob pointer-events-none"></div>
@@ -176,7 +176,8 @@ function iconFor(category: string): string {
                 
                 <div>
                   <div class="flex items-center justify-between mb-6 relative z-10">
-                    <div class="w-14 h-14 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 shadow-sm rounded-2xl flex items-center justify-center font-black text-gray-600 text-base group-hover:border-primary/30 group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-base group-hover:scale-110 group-hover:shadow-md transition-all duration-300 shadow-sm"
+                      [ngClass]="avatarClass(job.company)">
                       {{ job.company ? job.company.substring(0,2).toUpperCase() : 'CO' }}
                     </div>
                     <span class="px-3 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200 shadow-sm flex items-center gap-1">
@@ -274,6 +275,12 @@ export class Landing implements OnInit {
   // Role helpers
   isRecruiter = () => this.auth.isRecruiter();
   isJobSeeker = () => this.auth.isJobSeeker();
+
+  avatarClass(company: string | undefined): string {
+    const classes = ['avatar-a0','avatar-a1','avatar-a2','avatar-a3','avatar-a4','avatar-a5','avatar-a6','avatar-a7'];
+    const code = (company || 'C').charCodeAt(0);
+    return classes[code % classes.length];
+  }
 
   // ── Computed from real API data ──────────────────────────────────────────
   totalJobs   = computed(() => this.allJobs().length);
