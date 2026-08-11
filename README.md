@@ -55,7 +55,7 @@ A full-stack job portal built with a **Spring Boot microservices** backend and a
 ### Backend
 | Category | Technology |
 |----------|-----------|
-| Framework | Spring Boot 3.4.5 |
+| Framework | Spring Boot 3.5.0 |
 | Language | Java 21 |
 | Service Discovery | Netflix Eureka |
 | API Gateway | Spring Cloud Gateway |
